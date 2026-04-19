@@ -95,12 +95,16 @@ jobs:
           chmod +x ./gradlew
           ./gradlew build -x test || true 
 
-      - name: compile libimgui-java64.so (just please)
+      - name: compile libimgui-java64.so (can you work thank you)
         run: |
           mkdir -p imgui-binding/build/jni
+          
+          echo "--- get em ---"
           cp imgui-binding/src/main/native/* imgui-binding/build/jni/
-          cp imgui/*.cpp imgui-binding/build/jni/
-          cp imgui/*.h imgui-binding/build/jni/
+          find include -type f \( -name "*.cpp" -o -name "*.h" \) -exec cp {} imgui-binding/build/jni/ \;
+          
+          echo "--- JNI ---"
+          ls imgui-binding/build/jni/
           
           NDK_PATH="$ANDROID_SDK_ROOT/ndk-bundle"
           if [ ! -d "$NDK_PATH" ]; then NDK_PATH=$(find $ANDROID_SDK_ROOT/ndk -maxdepth 1 -type d | sort -r | head -n 1); fi
@@ -109,8 +113,17 @@ jobs:
           JAVA_INCLUDES="-I$JAVA_HOME/include -I$JAVA_HOME/include/linux"
           CXXFLAGS="-shared -fPIC -O2 -std=c++11 $JAVA_INCLUDES -I. -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS"
           
+          echo "--- compiling ---"
           cd imgui-binding/build/jni
           $CLANG_CXX $CXXFLAGS $(ls *.cpp | grep -v "jni_implot" | grep -v "jni_imnodes") -o libimgui-java64.so -lm
+          
+          if [ -f "libimgui-java64.so" ]; then
+            echo "--- SUCCESSFUL ---"
+            ls -l libimgui-java64.so
+          else
+            echo "--- ERROR: no .so generated ---"
+            exit 1
+          fi
           
           mkdir -p ../../../out
           cp libimgui-java64.so ../../../out/
