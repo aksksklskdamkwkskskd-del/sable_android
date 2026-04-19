@@ -94,8 +94,12 @@ jobs:
           chmod +x ./gradlew
           ./gradlew build -x test || true 
 
-      - name: compile libimgui-java.so
+      - name: compile libimgui-java64.so (just please)
         run: |
+          mkdir -p imgui-binding/build/jni
+          cp imgui-binding/src/main/native/* imgui-binding/build/jni/
+          cp imgui_source/*.cpp imgui_source/*.h imgui-binding/build/jni/
+          
           NDK_PATH="$ANDROID_SDK_ROOT/ndk-bundle"
           if [ ! -d "$NDK_PATH" ]; then NDK_PATH=$(find $ANDROID_SDK_ROOT/ndk -maxdepth 1 -type d | sort -r | head -n 1); fi
           CLANG_CXX="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++"
@@ -105,7 +109,7 @@ jobs:
           
           cd imgui-binding/build/jni
           $CLANG_CXX $CXXFLAGS $(ls *.cpp | grep -v "jni_implot" | grep -v "jni_imnodes") -o libimgui-java64.so -lm
-         
+          
           mkdir -p ../../../out
           cp libimgui-java64.so ../../../out/
 
@@ -148,7 +152,7 @@ jobs:
           
           TARGET_DIR="veil_internals/io/imgui/java/native-bin"
           mkdir -p $TARGET_DIR
-          cp ../imgui-dir/libimgui-java.so $TARGET_DIR/libimgui-java.so
+          cp ../imgui-dir/libimgui-java64.so $TARGET_DIR/libimgui-java64.so
           
           cd veil_internals
           zip -r -0 ../$VEIL_PATH . *
