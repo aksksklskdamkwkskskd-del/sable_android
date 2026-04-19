@@ -1,0 +1,163 @@
+name: Sable Native Android Port
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-sable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout sources
+        uses: actions/checkout@v4
+
+      - name: setup java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 21
+          cache: gradle
+
+      - name: setup rust for aarch64
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-01-29
+          targets: aarch64-linux-android
+          components: rust-src
+
+      - name: install rust-src
+        run: rustup component add rust-src
+
+      - name: configure cargo to use android ndk (ai help)
+        run: |
+          NDK_PATH="$ANDROID_SDK_ROOT/ndk-bundle"
+          if [ ! -d "$NDK_PATH" ]; then
+            NDK_PATH=$(find $ANDROID_SDK_ROOT/ndk -maxdepth 1 -type d | sort -r | head -n 1)
+          fi
+          
+          mkdir -p common/src/main/rust/rapier/.cargo
+          cat <<EOF > common/src/main/rust/rapier/.cargo/config.toml
+          [target.aarch64-linux-android]
+          linker = "$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
+          rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+          EOF
+ 
+      - name: build sable/rapier
+        working-directory: common/src/main/rust/rapier
+        run: |
+          export RUSTC_BOOTSTRAP=1 # nightly required
+          cargo build --release --target aarch64-linux-android
+          
+      - name: build the mod
+        run: |
+          chmod +x ./gradlew
+          ./gradlew build -x common:buildRustNatives
+
+      - name: inject lib into jar (ai help)
+        run: |
+          SO_FILE=$(find . -name "libsable_rapier.so" | grep "release" | grep "aarch64-linux-android" | head -n 1)
+          echo "native: $SO_FILE"
+          
+          JAR_FILE=$(find neoforge/build/libs/ -name "sable-neoforge-*.jar" | grep -v "sources" | head -n 1)
+          echo "jar file: $JAR_FILE"
+          
+          mkdir -p natives/sable_rapier
+          cp $SO_FILE natives/sable_rapier/sable_rapier_aarch64_linux.so
+          
+          zip -u "$JAR_FILE" natives/sable_rapier/sable_rapier_aarch64_linux.so
+          
+          mkdir -p out
+          cp $JAR_FILE out/sable-android.jar
+
+      - name: upload sable
+        uses: actions/upload-artifact@v4
+        with:
+          name: sable-artifact
+          path: out/sable-android.jar
+          
+  build-imgui:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout imgui-java repo
+        uses: actions/checkout@v4
+        with:
+          repository: SpaiR/imgui-java
+          ref: v1.86.1
+
+      - name: setup java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: generate jni folders (ai suggest)
+        run: |
+          chmod +x ./gradlew
+          ./gradlew build -x test || true 
+
+      - name: compile libimgui-java.so
+        run: |
+          NDK_PATH="$ANDROID_SDK_ROOT/ndk-bundle"
+          if [ ! -d "$NDK_PATH" ]; then NDK_PATH=$(find $ANDROID_SDK_ROOT/ndk -maxdepth 1 -type d | sort -r | head -n 1); fi
+          CLANG_CXX="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++"
+          
+          JAVA_INCLUDES="-I$JAVA_HOME/include -I$JAVA_HOME/include/linux"
+          CXXFLAGS="-shared -fPIC -O2 -std=c++11 $JAVA_INCLUDES -I. -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS"
+          
+          cd imgui-binding/build/jni
+          $CLANG_CXX $CXXFLAGS $(ls *.cpp | grep -v "jni_implot" | grep -v "jni_imnodes") -o libimgui-java64.so -lm
+         
+          mkdir -p ../../../out
+          cp libimgui-java64.so ../../../out/
+
+      - name: upload imgui
+        uses: actions/upload-artifact@v4
+        with:
+          name: imgui-artifact
+          path: out/libimgui-java64.so
+          
+  ### MERGE BOTH ###
+  
+  merge-all:
+    needs: [build-sable, build-imgui]
+    runs-on: ubuntu-latest
+    steps:
+      - name: get sable
+        uses: actions/download-artifact@v4
+        with:
+          name: sable-artifact
+          path: sable-dir
+
+      - name: get imgui
+        uses: actions/download-artifact@v4
+        with:
+          name: imgui-artifact
+          path: imgui-dir
+
+      - name: perform jar-jar
+        run: |
+          mkdir -p final
+          cp sable-dir/sable-android.jar final/Aeronautics-Android.jar
+          cd final
+          
+          unzip Aeronautics-Android.jar "META-INF/jarjar/veil-*.jar"
+          VEIL_PATH=$(find META-INF/jarjar/ -name "veil-*.jar")
+          echo "veil loc: $VEIL_PATH"
+          
+          mkdir -p veil_internals
+          unzip $VEIL_PATH -d veil_internals/
+          
+          TARGET_DIR="veil_internals/io/imgui/java/native-bin"
+          mkdir -p $TARGET_DIR
+          cp ../imgui-dir/libimgui-java.so $TARGET_DIR/libimgui-java.so
+          
+          cd veil_internals
+          zip -r -0 ../$VEIL_PATH . *
+          cd ..
+          
+          zip -u Aeronautics-Android.jar $VEIL_PATH
+
+      - name: upload final
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aeronautics-Android-FINAL
+          path: final/Aeronautics-Android.jar
