@@ -54,20 +54,21 @@ jobs:
 
       - name: inject lib into jar (ai help)
         run: |
-          JAR_FILE=$(find neoforge/build/libs/ -name "sable-neoforge-*.jar" | grep -v "sources" | head -n 1)
-          SO_FILE="common/src/main/rust/rapier/target/aarch64-linux-android/release/libsable_rapier.so"
+          SO_FILE=$(find . -name "libsable_rapier.so" | grep "release" | grep "aarch64-linux-android" | head -n 1)
+          echo "native: $SO_FILE"
           
+          JAR_FILE=$(find neoforge/build/libs/ -name "sable-neoforge-*.jar" | grep -v "sources" | head -n 1)
           echo "jar file: $JAR_FILE"
           
           mkdir -p natives/sable_rapier
           cp $SO_FILE natives/sable_rapier/sable_rapier_aarch64_linux.so
           
-          zip -u $JAR_FILE natives/sable_rapier/sable_rapier_aarch64_linux.so
+          zip -u "$JAR_FILE" natives/sable_rapier/sable_rapier_aarch64_linux.so
           
           mkdir -p out
           cp $JAR_FILE out/sable-android.jar
 
-      - name: Upload Artifact
+      - name: upload it (please)
         uses: actions/upload-artifact@v4
         with:
           name: Sable-Android-Build
