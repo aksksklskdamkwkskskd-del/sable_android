@@ -2,13 +2,23 @@ name: Sable Native Android Port
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   build-sable:
-    runs-on: ubuntu-latest
-    steps:
+     runs-on: ubuntu-latest
+     outputs:
+        version: ${{ steps.get_version.outputs.VERSION }}
+     steps:
       - name: checkout sources
         uses: actions/checkout@v4
+
+      - id: get_version
+        run: |
+          V=$(grep "version =" build.gradle | awk -F"'" '{print $2}' | head -n 1)
+          echo "VERSION=$V" >> $GITHUB_OUTPUT
 
       - name: setup java 21
         uses: actions/setup-java@v4
@@ -117,18 +127,20 @@ jobs:
           echo "--- files ---"
           ls imgui-binding/build/jni/
           
+          JAVA_INCLUDES="-I$JAVA_HOME/include -I$JAVA_HOME/include/linux"
+          
           NDK_PATH="$ANDROID_SDK_ROOT/ndk-bundle"
           if [ ! -d "$NDK_PATH" ]; then NDK_PATH=$(find $ANDROID_SDK_ROOT/ndk -maxdepth 1 -type d | sort -r | head -n 1); fi
           CLANG_CXX="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++"
           
           JAVA_INCLUDES="-I$JAVA_HOME/include -I$JAVA_HOME/include/linux"
-          CXXFLAGS="-shared -fPIC -O2 -std=c++11 $JAVA_INCLUDES -I. -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -w"
+          CXXFLAGS="-shared -fPIC -O3 -std=c++11 $JAVA_INCLUDES -I. -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -w -fno-stack-protector"
           
           echo "--- build starting---"
           
           cd imgui-binding/build/jni
           
-          $CLANG_CXX $CXXFLAGS *.cpp -o libimgui-java64.so -lm
+          $CLANG_CXX $CXXFLAGS *.cpp -o libimgui-java64.so -lm -llog -landroid
           
           if [ -f "libimgui-java64.so" ]; then
             echo "--- SUCCESSFUL ---"
@@ -151,6 +163,8 @@ jobs:
   merge-all:
     needs: [build-sable, build-imgui]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: get sable
         uses: actions/download-artifact@v4
@@ -167,12 +181,15 @@ jobs:
       - name: perform jar-jar
         run: |
           mkdir -p final
-          cp sable-dir/sable-android.jar final/Aeronautics-Android.jar
+          SABLE_FILE=$(find sable-dir -name "common-*.jar" | head -n 1)
+          VERSION="${{ needs.build-sable.outputs.version }}"
+          FINAL_NAME="sable-ANDROID-${VERSION}.jar"
+          
+          cp $SABLE_FILE final/$FINAL_NAME
           cd final
           
-          unzip Aeronautics-Android.jar "META-INF/jarjar/veil-*.jar"
+          unzip $FINAL_NAME "META-INF/jarjar/veil-*.jar"
           VEIL_PATH=$(find META-INF/jarjar/ -name "veil-*.jar")
-          echo "veil loc: $VEIL_PATH"
           
           mkdir -p veil_internals
           unzip $VEIL_PATH -d veil_internals/
@@ -182,13 +199,18 @@ jobs:
           cp ../imgui-dir/libimgui-java64.so $TARGET_DIR/libimgui-java64.so
           
           cd veil_internals
-          zip -r -0 ../$VEIL_PATH . *
+          zip -r ../updated_veil.jar .
           cd ..
           
-          zip -u Aeronautics-Android.jar $VEIL_PATH
+          zip -u $FINAL_NAME updated_veil.jar
+          echo "ASSET_PATH=final/$FINAL_NAME" >> $GITHUB_ENV
 
-      - name: upload final
-        uses: actions/upload-artifact@v4
+      - name: release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: Aeronautics-Android-FINAL
-          path: final/Aeronautics-Android.jar
+          files: "${{ env.ASSET_PATH }}"
+          name: "Sable Android ${{ github.ref_name }}"
+          body: "Automated Build: ${{ github.ref_name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
