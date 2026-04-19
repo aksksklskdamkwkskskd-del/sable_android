@@ -18,10 +18,12 @@ jobs:
           cache: gradle
 
       - name: setup rust for aarch64
-        uses: dtolnay/rust-toolchain@nightly # nightly required
+        uses: dtolnay/rust-toolchain@nightly
         with:
           targets: aarch64-linux-android
-          components: rust-src, rust-std # oops
+
+      - name: install rust-src
+        run: rustup component add rust-src
 
       - name: configure cargo to use android ndk (ai help)
         run: |
@@ -41,8 +43,8 @@ jobs:
         working-directory: common/src/main/rust/rapier
         run: |
           export RUSTC_BOOTSTRAP=1 # nightly required
-          cargo build --release --target aarch64-linux-android -Z build-std=core,alloc
-
+          cargo build --release --target aarch64-linux-android -Z build-std=core,alloc,std,proc_macro
+          
       - name: build the mod
         run: |
           chmod +x ./gradlew
