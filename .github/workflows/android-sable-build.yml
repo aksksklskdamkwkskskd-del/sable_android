@@ -38,12 +38,12 @@ jobs:
           linker = "$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
           rustflags = ["-C", "link-arg=-fuse-ld=lld"]
           EOF
-      
+ 
       - name: build sable/rapier
         working-directory: common/src/main/rust/rapier
         run: |
           export RUSTC_BOOTSTRAP=1 # nightly required
-          cargo build --release --target aarch64-linux-android -Z build-std=core,alloc,std,proc_macro
+          cargo build --release --target aarch64-linux-android
           
       - name: build the mod
         run: |
