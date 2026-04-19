@@ -99,11 +99,22 @@ jobs:
         run: |
           mkdir -p imgui-binding/build/jni
           
-          echo "--- get em ---"
+          echo "--- copying all modules ---"
           cp imgui-binding/src/main/native/* imgui-binding/build/jni/
-          find include -type f \( -name "*.cpp" -o -name "*.h" \) -exec cp {} imgui-binding/build/jni/ \;
           
-          echo "--- JNI ---"
+          cp include/imgui/*.cpp imgui-binding/build/jni/
+          cp include/imgui/*.h imgui-binding/build/jni/
+          
+          cp include/implot/*.cpp imgui-binding/build/jni/
+          cp include/implot/*.h imgui-binding/build/jni/
+          
+          cp include/imnodes/*.cpp imgui-binding/build/jni/
+          cp include/imnodes/*.h imgui-binding/build/jni/
+
+          cp include/ImGuiColorTextEdit/*.cpp imgui-binding/build/jni/
+          cp include/ImGuiColorTextEdit/*.h imgui-binding/build/jni/
+          
+          echo "--- files ---"
           ls imgui-binding/build/jni/
           
           NDK_PATH="$ANDROID_SDK_ROOT/ndk-bundle"
@@ -111,17 +122,18 @@ jobs:
           CLANG_CXX="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++"
           
           JAVA_INCLUDES="-I$JAVA_HOME/include -I$JAVA_HOME/include/linux"
-          CXXFLAGS="-shared -fPIC -O2 -std=c++11 $JAVA_INCLUDES -I. -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS"
+          CXXFLAGS="-shared -fPIC -O2 -std=c++11 $JAVA_INCLUDES -I. -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -w"
           
-          echo "--- compiling ---"
+          echo "--- build starting---"
+          
           cd imgui-binding/build/jni
-          $CLANG_CXX $CXXFLAGS $(ls *.cpp | grep -v "jni_implot" | grep -v "jni_imnodes") -o libimgui-java64.so -lm
+          
+          $CLANG_CXX $CXXFLAGS *.cpp -o libimgui-java64.so -lm
           
           if [ -f "libimgui-java64.so" ]; then
             echo "--- SUCCESSFUL ---"
-            ls -l libimgui-java64.so
           else
-            echo "--- ERROR: no .so generated ---"
+            echo "--- ERROR ---"
             exit 1
           fi
           
