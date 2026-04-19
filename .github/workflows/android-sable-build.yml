@@ -22,18 +22,17 @@ jobs:
         with:
           targets: aarch64-linux-android
 
-      - name: setup android ndk
-        id: setup-ndk
-        uses: nado1/setup-android-ndk@v1.6.0 # please work
-        with:
-          ndk-version: r26b
-
       - name: configure cargo to use android ndk (ai help)
         run: |
+          NDK_PATH="$ANDROID_SDK_ROOT/ndk-bundle"
+          if [ ! -d "$NDK_PATH" ]; then
+            NDK_PATH=$(find $ANDROID_SDK_ROOT/ndk -maxdepth 1 -type d | sort -r | head -n 1)
+          fi
+          
           mkdir -p common/src/main/rust/rapier/.cargo
           cat <<EOF > common/src/main/rust/rapier/.cargo/config.toml
           [target.aarch64-linux-android]
-          linker = "${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
+          linker = "$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
           rustflags = ["-C", "link-arg=-fuse-ld=lld"]
           EOF
       
