@@ -56,11 +56,6 @@ public class Rapier3D {
     }
 
     private static void loadLibrary() {
-        if (loadFromProperty()) {
-            ENABLED = true;
-            return;
-        }
-
         final String nativeName = getNativeName();
         try (final InputStream is = Rapier3D.class.getResourceAsStream("/natives/" + LIB_NAME + "/" + nativeName)) {
             if (is == null) {
@@ -76,19 +71,6 @@ public class Rapier3D {
 
             Sable.LOGGER.error("Sable has failed to load the natives needed for its Rapier pipeline. Native library name {}. Please report with system details and logs to {}", nativeName, Sable.ISSUE_TRACKER_URL, t);
         }
-    }
-
-    private static boolean loadFromProperty() {
-        final String libPath = System.getProperty("sable_rapier_path");
-        if (libPath != null) {
-            try {
-                System.load(Path.of(libPath).toAbsolutePath().toString());
-                return true;
-            } catch (final Throwable t) {
-                Sable.LOGGER.warn("Sable has failed to load the Rapier pipeline from path {}.", libPath);
-            }
-        }
-        return false;
     }
 
     /**
