@@ -18,9 +18,11 @@ jobs:
           cache: gradle
 
       - name: setup rust for aarch64
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: nightly-2026-01-29
           targets: aarch64-linux-android
+          components: rust-src
 
       - name: install rust-src
         run: rustup component add rust-src
