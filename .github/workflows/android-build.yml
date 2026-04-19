@@ -82,6 +82,7 @@ jobs:
         with:
           repository: SpaiR/imgui-java
           ref: v1.86.1
+          submodules: recursive
 
       - name: setup java
         uses: actions/setup-java@v4
@@ -98,7 +99,8 @@ jobs:
         run: |
           mkdir -p imgui-binding/build/jni
           cp imgui-binding/src/main/native/* imgui-binding/build/jni/
-          cp imgui_source/*.cpp imgui_source/*.h imgui-binding/build/jni/
+          cp imgui/*.cpp imgui-binding/build/jni/
+          cp imgui/*.h imgui-binding/build/jni/
           
           NDK_PATH="$ANDROID_SDK_ROOT/ndk-bundle"
           if [ ! -d "$NDK_PATH" ]; then NDK_PATH=$(find $ANDROID_SDK_ROOT/ndk -maxdepth 1 -type d | sort -r | head -n 1); fi
