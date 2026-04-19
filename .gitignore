@@ -7,8 +7,8 @@
 *.iws
 
 # Rust
-/common/src/main/rust/rapier/target
-/common/src/main/rust/rapier/flamegraph.svg
+/common/src/main/rust/target
+/common/src/main/rust/flamegraph.svg
 
 # C# - Sharp
 /common/src/main/csharp/*/bin/
