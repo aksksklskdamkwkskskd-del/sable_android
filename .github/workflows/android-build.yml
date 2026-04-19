@@ -90,7 +90,7 @@ jobs:
         with:
           name: sable-artifact
           path: out/sable-android.jar
-          
+        
   build-imgui:
     runs-on: ubuntu-latest
     steps:
@@ -188,10 +188,11 @@ jobs:
       - name: perform jar-jar
         run: |
           mkdir -p final
-          SABLE_FILE=$(find sable-dir -name "common-*.jar" | head -n 1)
           
+          SABLE_FILE="sable-dir/sable-android.jar"
           VER="${{ needs.build-sable.outputs.VERSION }}"
-          if [ -z "$VER" ]; then VER="latest"; fi
+          
+          if [ -z "$VER" ] || [ "$VER" == "" ]; then VER="latest"; fi
           FINAL_NAME="sable-ANDROID-${VER}.jar"
           
           cp "$SABLE_FILE" "final/$FINAL_NAME"
