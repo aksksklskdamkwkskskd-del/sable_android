@@ -18,9 +18,10 @@ jobs:
           cache: gradle
 
       - name: setup rust for aarch64
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@nightly # nightly required
         with:
           targets: aarch64-linux-android
+          components: rust-src, rust-std # oops
 
       - name: configure cargo to use android ndk (ai help)
         run: |
