@@ -5,19 +5,26 @@ on:
   push:
     tags:
       - 'v*'
+  schedule:
+    - cron: '0 0 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-sable:
-     runs-on: ubuntu-latest
-     outputs:
-        version: ${{ steps.get_version.outputs.VERSION }}
-     steps:
+    runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.get_version.outputs.VERSION }}
+    steps:
       - name: checkout sources
         uses: actions/checkout@v4
 
       - id: get_version
         run: |
           V=$(grep "version =" build.gradle | awk -F"'" '{print $2}' | head -n 1)
+          if [ -z "$V" ]; then V="latest"; fi
           echo "VERSION=$V" >> $GITHUB_OUTPUT
 
       - name: setup java 21
@@ -182,27 +189,29 @@ jobs:
         run: |
           mkdir -p final
           SABLE_FILE=$(find sable-dir -name "common-*.jar" | head -n 1)
-          VERSION="${{ needs.build-sable.outputs.version }}"
-          FINAL_NAME="sable-ANDROID-${VERSION}.jar"
           
-          cp $SABLE_FILE final/$FINAL_NAME
+          VER="${{ needs.build-sable.outputs.VERSION }}"
+          if [ -z "$VER" ]; then VER="latest"; fi
+          FINAL_NAME="sable-ANDROID-${VER}.jar"
+          
+          cp "$SABLE_FILE" "final/$FINAL_NAME"
+          
           cd final
-          
-          unzip $FINAL_NAME "META-INF/jarjar/veil-*.jar"
+          unzip "$FINAL_NAME" "META-INF/jarjar/veil-*.jar"
           VEIL_PATH=$(find META-INF/jarjar/ -name "veil-*.jar")
           
           mkdir -p veil_internals
-          unzip $VEIL_PATH -d veil_internals/
+          unzip "$VEIL_PATH" -d veil_internals/
           
           TARGET_DIR="veil_internals/io/imgui/java/native-bin"
-          mkdir -p $TARGET_DIR
-          cp ../imgui-dir/libimgui-java64.so $TARGET_DIR/libimgui-java64.so
+          mkdir -p "$TARGET_DIR"
+          cp ../imgui-dir/libimgui-java64.so "$TARGET_DIR/libimgui-java64.so"
           
           cd veil_internals
           zip -r ../updated_veil.jar .
           cd ..
           
-          zip -u $FINAL_NAME updated_veil.jar
+          zip -u "$FINAL_NAME" updated_veil.jar
           echo "ASSET_PATH=final/$FINAL_NAME" >> $GITHUB_ENV
 
       - name: release
