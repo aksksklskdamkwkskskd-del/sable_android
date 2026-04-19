@@ -41,7 +41,7 @@ jobs:
         working-directory: common/src/main/rust/rapier
         run: |
           export RUSTC_BOOTSTRAP=1 # nightly required
-          cargo build --release --target aarch64-linux-android
+          cargo build --release --target aarch64-linux-android -Z build-std=core,alloc
 
       - name: build the mod
         run: |
