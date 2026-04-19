@@ -17,10 +17,10 @@ jobs:
           java-version: 21
           cache: gradle
 
-      - name: setup android ndk
-        uses: nndixon/setup-android-ndk@v1
-        with:
-          ndk-version: r26b
+      - name: verify android ndk
+        run: |
+          echo "NDK: ${ANDROID_SDK_ROOT}/ndk-bundle"
+          ls ${ANDROID_SDK_ROOT}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang || echo "not found"
 
       - name: setup rust for aarch64
         uses: dtolnay/rust-toolchain@stable
@@ -32,7 +32,7 @@ jobs:
           mkdir -p common/src/main/rust/rapier/.cargo
           cat <<EOF > common/src/main/rust/rapier/.cargo/config.toml
           [target.aarch64-linux-android]
-          linker = "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
+          linker = "${ANDROID_SDK_ROOT}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
           rustflags = ["-C", "link-arg=-fuse-ld=lld"]
           EOF
 
