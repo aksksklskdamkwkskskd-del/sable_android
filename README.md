@@ -35,6 +35,10 @@ Play?
 Sable from releases, anything else from their sources as usual.
 - Get Android version of Sable from <a href="https://github.com/aksksklskdamkwkskskd-del/sable_android/releases/">releases</a> and Create, Create Aeronautics, etc. from their sources (eg. Modrinth).
 
+- Use NeoForge as modloader.
+> I didn't included Fabric externally, it doesn't have the main support directly in the ecosystem.
+> If you want it, inform me about it and MIGHT add fabric releases too (already in plans but not soon).
+
 - Tested on Amethyst Launcher (pajov fork, some late 2025 version) on Android 14.
 - Using Java 21 seems fine.
 - Mali (GPU) users may use Zink.
@@ -63,9 +67,16 @@ or similar.
 > [!IMPORTANT]
 > Fixes invisible shafts and moving parts of the blocks. Caused by flywheel rendering, related to Create, as it's embedded.
 
+# Plans List
+- [x] Release building system.
+- [x] First release (NeoForge)
+- [ ] Automation (auto deploy release)
+- [ ] Extra: Fabric support
+- [ ] Extra: Main instructions besides android-build.yml
+
 # Details about building it (this)
 
-Auto build via .github/android-build.yml. Building it on github servers as github action.
+Auto build via "Sable Native Android Port" action (.github/android-build.yml). Building it on github servers as github action.
 
 It builds both imgui to satisfy veil and satisfy + build Sable itself.
 
