@@ -5,8 +5,6 @@ on:
   push:
     tags:
       - 'v*'
-  schedule:
-    - cron: '0 0 * * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,18 +13,10 @@ concurrency:
 jobs:
   build-sable:
     runs-on: ubuntu-latest
-    outputs:
-      VERSION: ${{ steps.get_version.outputs.VERSION }}
     steps:
       - name: checkout sources
         uses: actions/checkout@v4
-
-      - id: get_version
-        run: |
-          V=$(grep "version =" build.gradle | awk -F"'" '{print $2}' | head -n 1)
-          if [ -z "$V" ]; then V="latest"; fi
-          echo "VERSION=$V" >> $GITHUB_OUTPUT
-
+        
       - name: setup java 21
         uses: actions/setup-java@v4
         with:
@@ -190,9 +180,9 @@ jobs:
           mkdir -p final
           
           SABLE_FILE="sable-dir/sable-android.jar"
-          VER="${{ needs.build-sable.outputs.VERSION }}"
-          
-          if [ -z "$VER" ] || [ "$VER" == "" ]; then VER="latest"; fi
+
+          VER="${{ github.ref_name }}"
+          if [[ "${{ github.ref }}" != refs/tags/* ]]; then VER="latest"; fi
           FINAL_NAME="sable-ANDROID-${VER}.jar"
           
           cp "$SABLE_FILE" "final/$FINAL_NAME"
