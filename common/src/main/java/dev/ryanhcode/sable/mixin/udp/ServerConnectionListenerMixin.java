@@ -69,7 +69,8 @@ public class ServerConnectionListenerMixin implements ServerConnectionListenerEx
                         }
                     })
                     .group(eventLoopGroup)
-                    .bind(port)
+                    .localAddress(inetAddress, port)
+                    .bind()
                     .syncUninterruptibly());
         }
     }
