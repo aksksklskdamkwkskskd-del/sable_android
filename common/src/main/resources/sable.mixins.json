@@ -74,7 +74,6 @@
     "sublevel_sounds.ClientLevelMixin",
     "sublevel_sounds.SoundEngineMixin",
     "toast.IntegratedServerMixin",
-    "udp.ClientCommonPacketListenerImplMixin",
     "water_occlusion.CameraMixin",
     "water_occlusion.FogRendererMixin",
     "water_occlusion.GameRendererMixin"

@@ -52,7 +52,12 @@ public class SableCommand {
         sableBuilder
                 .then(debugBuilder
                         .then(Commands.literal("udp_test").executes(ctx -> {
-                            SableUDPServer.sendPacket(ctx.getSource().getPlayerOrException(), new SableUDPEchoPacket("Skibidi Toilet"), true);
+                            final SableUDPServer server = SableUDPServer.getServer(ctx.getSource().getServer());
+
+                            if (server != null) {
+                                server.sendUDPPacket(ctx.getSource().getPlayerOrException(), new SableUDPEchoPacket("Skibidi Toilet"), true);
+                            }
+
                             return 1;
                         }))
                 );

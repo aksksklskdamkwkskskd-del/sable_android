@@ -106,4 +106,21 @@ publishMods {
 
         allowEmptyFiles = true
     }
+
+    // We only want to send one message
+    if (isFabric) {
+        discord {
+            webhookUrl = providers.environmentVariable("DISCORD_WEBHOOK")
+
+            avatarUrl = "https://cdn.modrinth.com/data/T9PomCSv/8c0a8c64c9a5a8d446d0aa23d244cb9b52314a1d.png"
+            username = "Sable Updates"
+
+            def modrinthLink = "https://modrinth.com/mod/sable"
+            def curseForgeLink = "<https://www.curseforge.com/minecraft/mc-mods/sable>"
+
+            content = changelog.map {
+                "# Sable release $project.version \n$it\n\nModrinth: $modrinthLink\nCurseForge: $curseForgeLink"
+            }
+        }
+    }
 }
