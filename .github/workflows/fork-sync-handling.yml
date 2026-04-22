@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   sync:
@@ -18,7 +19,7 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.SYNC_TOKEN }}
 
-      - name: Fetch & Merge
+      - name: Sync Tags
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
@@ -26,10 +27,27 @@ jobs:
           git remote add upstream https://github.com/ryanhcode/sable.git
           
           git fetch upstream --tags
-          
           git checkout main
-          
           git merge upstream/main --no-edit
-          
           git push origin main
           git push origin --tags
+
+      - name: Trigger Builds
+        run: |
+          TAGS=$(git tag -l "mc*-*")
+          
+          for TAG in $TAGS; do
+            if ! gh release view "$TAG" >/dev/null 2>&1; then
+              echo "+ $TAG (New version found)"
+              
+              gh workflow run android-build.yml --ref main \
+                -f loader=neoforge -f build_ref="$TAG"
+              
+              gh workflow run android-build.yml --ref main \
+                -f loader=fabric -f build_ref="$TAG"
+              
+              sleep 5
+            else
+              echo "- $TAG (Skipped, already has a release)"
+            fi
+          done
