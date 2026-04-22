@@ -1,12 +1,3 @@
- - Fix texture binding issues causing visual artifacts on some Intel GPUs
- - Fix lectern Linked Controller dupe
- - Fix Sculk events working with sub-levels
- - Fix a crash with Create Chain Conveyors
- - Fix vines growing outside of sub-level bounds
- - Add small `/sable storage` commands for finding and listing positions of unloaded ships
- - Improve issue handling for Sable's UDP pipeline
- - Improve the compatibility of Sable's mixins for Create's Mechanical Harvester
- - Update Sable Companion to support more API methods
- - Add API handles for generic physics constraints
- - Add stack-trace for easier debugging of entity large-AABB aborting issues
- - Optimize some mixins used for sub-levels
+ - Allow for the entire UDP pipeline to be disabled
+ - Adjust compatibility with Create's Mechanical Harvester
+ - Tweak assembly handling

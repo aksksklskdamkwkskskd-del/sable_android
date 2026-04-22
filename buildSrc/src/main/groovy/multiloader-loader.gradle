@@ -109,7 +109,7 @@ publishMods {
     }
 
     // We only want to send one message
-    if (isFabric) {
+    if (!isFabric) {
         discord {
             webhookUrl = providers.environmentVariable("DISCORD_WEBHOOK")
 
@@ -119,8 +119,10 @@ publishMods {
             def modrinthLink = "https://modrinth.com/mod/sable"
             def curseForgeLink = "<https://www.curseforge.com/minecraft/mc-mods/sable>"
 
+            setPlatforms(publishMods.platforms.modrinth)
+
             content = changelog.map {
-                "# Sable release $project.version \n$it\n\nModrinth: $modrinthLink\nCurseForge: $curseForgeLink"
+                "# Sable release $project.version \n$it\nModrinth: $modrinthLink\nCurseForge: $curseForgeLink"
             }
         }
     }
