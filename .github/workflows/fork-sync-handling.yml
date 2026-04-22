@@ -33,6 +33,8 @@ jobs:
           git push origin --tags
 
       - name: Trigger Builds
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
         run: |
           TAGS=$(git tag -l "mc*-*")
           
