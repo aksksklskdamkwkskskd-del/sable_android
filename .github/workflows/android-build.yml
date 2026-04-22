@@ -221,6 +221,6 @@ jobs:
           files: "${{ env.ASSET_PATH }}"
           tag_name: "${{ github.event.inputs.build_ref }}"
           name: "Sable Android ${{ github.event.inputs.build_ref }}"
-          body: "Sable Android for ${{ github.event.inputs.loader }} loader.\nAutomated Build"
+          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
