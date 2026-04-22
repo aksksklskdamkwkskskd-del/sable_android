@@ -42,6 +42,7 @@ public class SableCommand {
         SableSpawnCommands.register(sableBuilder, buildContext);
         SableSubLevelCommands.register(sableBuilder, buildContext);
         SableAssembleCommands.register(sableBuilder, buildContext);
+        SableStorageCommands.register(sableBuilder, buildContext);
 
         final LiteralArgumentBuilder<CommandSourceStack> debugBuilder = Commands.literal("debug");
 

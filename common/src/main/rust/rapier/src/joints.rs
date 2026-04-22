@@ -494,7 +494,7 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_add
     handle_long
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_addGenericConstraint<
     'local,
 >(
@@ -595,7 +595,7 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_add
     handle_long
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_setConstraintFrame<
     'local,
 >(
@@ -634,6 +634,6 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_set
             joint.pos_b = position;
             joint.rotation_b = Some(rotation);
         }
-        _ => panic!("Invalid constraint frame side: {}", side)
+        _ => panic!("Invalid constraint frame side: {}", side),
     }
 }
