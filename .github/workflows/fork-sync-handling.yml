@@ -39,20 +39,21 @@ jobs:
           TAGS=$(git tag -l "mc*-*")
           
           for TAG in $TAGS; do
-            if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            if ! gh release view "$TAG" >/dev/null 2>&1; then
               echo "++ $TAG ++ (New release version found)"
               
               if [[ "$TAG" == *"fabric"* ]]; then
-                gh workflow run android-build.yml --ref main \
+                gh workflow run android-build.yml --repo ${{ github.repository }} --ref main \
                   -f loader=fabric -f build_ref="$TAG"
                   
               elif [[ "$TAG" == *"neoforge"* ]]; then
-                gh workflow run android-build.yml --ref main \
-                  -f loader=neoforge -f build_ref="$TAG"            
-              else
-                gh workflow run android-build.yml --ref main \
+                gh workflow run android-build.yml --repo ${{ github.repository }} --ref main \
                   -f loader=neoforge -f build_ref="$TAG"
-                gh workflow run android-build.yml --ref main \
+                  
+              else
+                gh workflow run android-build.yml --repo ${{ github.repository }} --ref main \
+                  -f loader=neoforge -f build_ref="$TAG"
+                gh workflow run android-build.yml --repo ${{ github.repository }} --ref main \
                   -f loader=fabric -f build_ref="$TAG"
               fi
               
