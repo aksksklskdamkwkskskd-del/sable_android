@@ -9,9 +9,13 @@ import dev.ryanhcode.sable.physics.impl.rapier.collider.RapierVoxelColliderData;
 import net.minecraft.Util;
 import net.minecraft.Util.OS;
 import net.minecraft.server.level.ServerLevel;
+
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.jetbrains.annotations.ApiStatus;
 import org.joml.Matrix3dc;
 import org.joml.Vector3dc;
+import org.tukaani.xz.XZInputStream;
 
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -57,19 +61,33 @@ public class Rapier3D {
 
     private static void loadLibrary() {
         final String nativeName = getNativeName();
-        try (final InputStream is = Rapier3D.class.getResourceAsStream("/natives/" + LIB_NAME + "/" + nativeName)) {
+        try (final InputStream is = Rapier3D.class.getResourceAsStream("/natives/" + LIB_NAME + "/sable_rapier_binaries.tar.xz")) {
             if (is == null) {
-                throw new FileNotFoundException(LIB_NAME);
+                throw new FileNotFoundException("sable_rapier_binaries.tar.xz");
             }
+            try (final XZInputStream is2 = new XZInputStream(is);
+                 final TarArchiveInputStream ti = new TarArchiveInputStream(is2)) {
 
-            final Path tempFile = Files.createTempFile(LIB_TMP_DIR_PREFIX, null);
-            Files.copy(is, tempFile, StandardCopyOption.REPLACE_EXISTING);
-            System.load(tempFile.toAbsolutePath().toString());
-            ENABLED = true;
+                TarArchiveEntry entry;
+                while ((entry = ti.getNextEntry()) != null) {
+                    if (entry.getName().equals(nativeName)) {
+                        final String[] split = nativeName.split("\\.");
+                        final Path tempFile = Files.createTempFile(split[0], "." + split[1]);
+                        Files.copy(ti, tempFile, StandardCopyOption.REPLACE_EXISTING);
+                        System.load(tempFile.toAbsolutePath().toString());
+                        ENABLED = true;
+                        return;
+                    }
+                }
+
+                throw new FileNotFoundException(nativeName);
+            }
         } catch (final Throwable t) {
             ENABLED = false;
 
-            Sable.LOGGER.error("Sable has failed to load the natives needed for its Rapier pipeline. Native library name {}. Please report with system details and logs to {}", nativeName, Sable.ISSUE_TRACKER_URL, t);
+            Sable.LOGGER.error(
+                    "Sable has failed to load the natives needed for its Rapier pipeline. Native library name {}. Please report with system details and logs to {}",
+                    nativeName, Sable.ISSUE_TRACKER_URL, t);
         }
     }
 
