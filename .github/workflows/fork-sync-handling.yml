@@ -40,16 +40,24 @@ jobs:
           
           for TAG in $TAGS; do
             if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-              echo "+ $TAG (New version found)"
+              echo "++ $TAG ++ (New release version found)"
               
-              gh workflow run android-build.yml --repo "$GITHUB_REPOSITORY" --ref main \
-                -f loader=neoforge -f build_ref="$TAG"
-              
-              gh workflow run android-build.yml --repo "$GITHUB_REPOSITORY" --ref main \
-                -f loader=fabric -f build_ref="$TAG"
+              if [[ "$TAG" == *"fabric"* ]]; then
+                gh workflow run android-build.yml --ref main \
+                  -f loader=fabric -f build_ref="$TAG"
+                  
+              elif [[ "$TAG" == *"neoforge"* ]]; then
+                gh workflow run android-build.yml --ref main \
+                  -f loader=neoforge -f build_ref="$TAG"            
+              else
+                gh workflow run android-build.yml --ref main \
+                  -f loader=neoforge -f build_ref="$TAG"
+                gh workflow run android-build.yml --ref main \
+                  -f loader=fabric -f build_ref="$TAG"
+              fi
               
               sleep 5
             else
-              echo "- $TAG (Skipped, already has a release)"
+              echo "-- $TAG -- (Skipped, already has a release)"
             fi
           done
