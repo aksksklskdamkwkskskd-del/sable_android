@@ -11,10 +11,11 @@ on:
         options:
           - neoforge
           - fabric
-  push:
-    tags:
-      - 'mc*-*'
-
+      build_ref:
+        description: 'Tag or Branch to build'
+        required: true
+        default: 'main'
+        
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -25,18 +26,19 @@ jobs:
     steps:
       - name: checkout sources
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.build_ref || github.ref }}
+          fetch-depth: 0
         
       - name: set loader environment (neoforge/fabric)
         id: set-env
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "LOADER=${{ github.event.inputs.loader }}" >> $GITHUB_ENV
+            echo "VERSION_NAME=${{ github.event.inputs.build_ref }}" >> $GITHUB_ENV
           else
-            if [[ "${{ github.ref_name }}" == *"fabric"* ]]; then
-              echo "LOADER=fabric" >> $GITHUB_ENV
-            else
-              echo "LOADER=neoforge" >> $GITHUB_ENV
-            fi
+            echo "VERSION_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+            [[ "${{ github.ref_name }}" == *"fabric"* ]] && echo "LOADER=fabric" || echo "LOADER=neoforge" >> $GITHUB_ENV
           fi
 
       - name: setup java 21
@@ -202,7 +204,7 @@ jobs:
           
           SABLE_FILE="sable-dir/sable-android.jar"
 
-          VER="${{ github.ref_name }}"
+          VER="${{ env.VERSION_NAME }}"
           if [[ "${{ github.ref }}" != refs/tags/* ]]; then VER="latest"; fi
           FINAL_NAME="sable-ANDROID-${VER}.jar"
           
