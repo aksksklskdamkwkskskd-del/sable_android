@@ -20,28 +20,20 @@ Which is required for Create Aeronautics physics to work.
 
 <b>With this repo, now you can play Create Aeronautics on android!<br>(via any pajov based launcher)</b>
 
-# How
-
-Some Sable libraries require pc native (x86-x64) environment.
-
-We build the android port from original sources with Android NDK to fill that blank (aarch64, android 24).
-
-~Details bellow.~ (NOT READY)
-
 # How can I..?
 
-Play?
+**Play?**
 
 Sable from releases, anything else from their sources as usual.
 - Get Android version of Sable from <a href="https://github.com/aksksklskdamkwkskskd-del/sable_android/releases/">releases</a> and Create, Create Aeronautics, etc. from their sources (eg. Modrinth).
 
-- Use NeoForge as modloader.
-> I didn't included Fabric externally, it doesn't have the main support directly in the ecosystem.
-> If you want it, inform me about it and MIGHT add fabric releases too (already in plans but not soon).
+- Using NeoForge **HIGHLY RECOMMENDED**.
+- Fabric **is** included but **not tested** (Please inform me about Fabric, is it working fine?)
 
 - Tested on Amethyst Launcher (pajov fork, some late 2025 version) on Android 14.
 - Using Java 21 seems fine.
 - Mali (GPU) users may use Zink.
+
 - You can inform me about issues _caused by the port_. 
 
 #### Classic Mod Installing Steps
@@ -67,11 +59,44 @@ or similar.
 > [!IMPORTANT]
 > Fixes invisible shafts and moving parts of the blocks. Caused by flywheel rendering, related to Create, as it's embedded.
 
+# Basic Q&A
+
+<details>
+   <summary><b>Q: Are you planning to & When will you, add [X] version to releases?</b></summary>
+   
+   **A:** Trying to add all versions to supported side as I can. Right now, all new releases from main repo gets ported everyday at 00:00. If everything is fine, automatic builds will occur 1 day (max) after the main repository versions are shared.</details>
+
+</details><br>
+
+<details>
+   <summary><b>Q: What happens when main changes their code and brokes the new builds?</b></summary>
+   
+   **A:** I would try to fix conflicts or issues happening and implement an new building way that works (If I can).
+</details><br>
+
+<details>
+   <summary><b>Q: How long will you support this project?</b></summary>
+   
+   **A:** Not sure. But wouldn't leave it without notifying it. Also not planing to in the near future neither.
+</details><br>
+
+<details>
+   <summary><b>Q: Is it playable?</b></summary>
+   
+   **A:** As from my experience and others feedbacks, it is. Haven't seen an issue yet. But you can inform me about <i>port issues</i> and similar.
+</details><br>
+<br><br><br>
+<details>
+   <summary><b>Q: how are you today</b></summary>
+   
+   **A:** mostly liquid (at room temperature)
+</details>
+
 # Plans List
 - [x] Release building system.
 - [x] First release (NeoForge)
-- [ ] Automation (auto deploy release)
-- [ ] Extra: Fabric support
+- [x] Automation (auto deploy release)
+- [x] Extra: Fabric support **(NOT TESTED)**
 - [ ] Extra: Main instructions besides android-build.yml
 
 # Details about building it (this)
@@ -86,8 +111,8 @@ It just compiles imgui and Sable for android compatibility, puts all into each o
 
 Originally, I did it inside my termux environment, on the same day it came out. This repo has simpler version of that process. (With a lot of AI help ofc.)
 
-Instructions not avaible for now. Its just the .github/android-build.yml but on termux and extra tricky.
+Instructions are not avaible for now.
 
-> but planning to explain how i had it in the first place, termux version of instructions MIGHT be published here
+> But planning to explain how i had it in the first place, termux version of instructions MIGHT be published here
 > 
 > (not an github professional here as you can see)
