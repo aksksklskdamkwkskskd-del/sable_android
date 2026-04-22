@@ -39,7 +39,7 @@ jobs:
           TAGS=$(git tag -l "mc*-*")
           
           for TAG in $TAGS; do
-            if ! gh release view "$TAG" >/dev/null 2>&1; then
+            if ! gh release view --repo "$GITHUB_REPOSITORY" "$TAG" > /dev/null 2>&1; then
               echo "++ $TAG ++ (New release version found)"
               
               if [[ "$TAG" == *"fabric"* ]]; then
