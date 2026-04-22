@@ -61,6 +61,7 @@ publishMods {
     curseforge {
         accessToken = providers.environmentVariable("CURSEFORGE_API_KEY")
         projectId = "1312371"
+        projectSlug = "sable"
         minecraftVersions.add(minecraft_version)
 
         clientRequired = true
