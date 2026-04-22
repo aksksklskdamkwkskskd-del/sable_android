@@ -189,7 +189,7 @@ jobs:
           SABLE_FILE="sable-dir/sable-android.jar"
           VER="${{ github.event.inputs.build_ref }}"
           LOADER="${{ github.event.inputs.loader }}"
-          FINAL_NAME="sable-ANDROID-${LOADER}-${VER}.jar"
+          FINAL_NAME="sable-ANDROID-${VER}.jar"
           
           cp "$SABLE_FILE" "final/$FINAL_NAME"
           
