@@ -63,11 +63,14 @@ jobs:
           echo "CC_aarch64_linux_android=$CLANG" >> $GITHUB_ENV
           echo "AR_aarch64_linux_android=$TOOLCHAIN/llvm-ar" >> $GITHUB_ENV
 
-      - name: build imgui
+      - name: build imgui-java natives
         run: |
+          git clone --depth 1 https://github.com/SpaiR/imgui-java.git
           cd imgui-java
+          chmod +x ./gradlew
+          
           ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
-         
+          
           cd imgui-binding/src/main/cpp
           
           cat <<EOF > Application.mk
@@ -87,10 +90,8 @@ jobs:
                               \$(LOCAL_PATH)/../../../include \\
                               \$(LOCAL_PATH)/../../../include/imgui \\
                               \$(LOCAL_PATH)/../../../include/implot \\
-                              \$(LOCAL_PATH)/../../../include/imnodes \\
-                              \$(LOCAL_PATH)/../../../include/ImGuiColorTextEdit \\
-                              \$(LOCAL_PATH)/../../../include/ImGuiFileDialog
-
+                              \$(LOCAL_PATH)/../../../include/imnodes
+          
           LOCAL_SRC_FILES := \$(wildcard \$(LOCAL_PATH)/*.cpp)
           
           LOCAL_SRC_FILES += \$(wildcard \$(LOCAL_PATH)/../../../include/imgui/*.cpp)
@@ -101,10 +102,21 @@ jobs:
           include \$(BUILD_SHARED_LIBRARY)
           EOF
 
+          tree -L 3
+          
           $ANDROID_NDK_HOME/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk NDK_APPLICATION_MK=Application.mk
 
           mkdir -p ../../../../../imgui-native-android
-          cp libs/arm64-v8a/libimgui-java64.so ../../../../../imgui-native-android/
+          if [ -f "libs/arm64-v8a/libimgui-java64.so" ]; then
+            cp libs/arm64-v8a/libimgui-java64.so ../../../../../imgui-native-android/
+            echo "SUCCESS, copied imgui"
+          else
+            echo "imgui not found"
+            find . -name "*.so"
+            echo "--- FILES ---"
+            tree -L 3
+            exit 1
+          fi
           
       - name: build rapier (rust natives)
         run: |
