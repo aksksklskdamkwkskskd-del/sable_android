@@ -74,11 +74,19 @@ jobs:
       - name: build rapier (marten) manually
         run: |
           cd common/src/main/rust/marten
+          
           cargo build --target aarch64-linux-android --release
           
           mkdir -p $GITHUB_WORKSPACE/rapier-native-android
-          cp ../../../../target/aarch64-linux-android/release/libmarten.so $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so
-
+          
+          RAPIER_SO=$(find ../../../../target/aarch64-linux-android/release -name "libmarten.so" | head -n 1)
+          
+          if [ -z "$RAPIER_SO" ]; then
+            echo "rapier binary not found"
+            exit 1
+          fi
+          
+          cp "$RAPIER_SO" $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so
       - name: build mod
         run: |
           chmod +x ./gradlew
@@ -87,14 +95,16 @@ jobs:
       - name: perform jar-jar
         run: |
           mkdir -p final
+          
           SABLE_JAR=$(find ${{ env.LOADER }}/build/libs -name "sable-*.jar" ! -name "*-sources.jar" | head -n 1)
           FINAL_NAME="sable-ANDROID-${{ github.event.inputs.build_ref }}.jar"
           cp "$SABLE_JAR" "final/$FINAL_NAME"
           
-          mkdir -p final/natives/sable_rapier
+          mkdir -p final/natives/sable_rapier/
           cp rapier-native-android/sable_rapier_aarch64_linux.so final/natives/sable_rapier/
           
           cd final
+          
           zip -u "$FINAL_NAME" natives/sable_rapier/sable_rapier_aarch64_linux.so
           
           VEIL_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep "veil-.*\.jar" | awk '{print $4}' | head -n 1 | tr -d '\r')
