@@ -107,24 +107,23 @@ jobs:
           cp "$SABLE_JAR" "final/$FINAL_NAME"
           
           cd final
+          VEIL_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep "veil-.*\.jar" | awk '{print $4}' | head -n 1 | tr -d '\r')
+          echo "Found internal jar at: $VEIL_INTERNAL_PATH"
           
-          unzip "$FINAL_NAME" "*/veil-*.jar" -d tmp_veil || true
-          VEIL_PATH=$(find tmp_veil -name "veil-*.jar" | head -n 1)
+          unzip "$FINAL_NAME" "$VEIL_INTERNAL_PATH" -d .
           
-          mkdir -p veil_internals
-          unzip "$VEIL_PATH" -d veil_internals/
+          mkdir -p veil_patch
+          unzip "$VEIL_INTERNAL_PATH" -d veil_patch/
           
-          TARGET_DIR="veil_internals/io/imgui/java/native-bin/linux-aarch64"
+          TARGET_DIR="veil_patch/io/imgui/java/native-bin/linux-aarch64"
           mkdir -p "$TARGET_DIR"
-          
           cp ../imgui-native-android/libimgui-java64.so "$TARGET_DIR/libimgui-java64.so"
           
-          cd veil_internals
-          zip -r ../updated_veil.jar .
+          cd veil_patch
+          zip -r ../patched_veil.jar .
           cd ..
           
-          VEIL_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep "veil-.*\.jar" | awk '{print $4}' | head -n 1)
-          mv updated_veil.jar "$VEIL_INTERNAL_PATH"
+          mv patched_veil.jar "$VEIL_INTERNAL_PATH"
           
           zip -d "$FINAL_NAME" "META-INF/*.SF" "META-INF/*.RSA" "META-INF/*.DSA" || true
           zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
