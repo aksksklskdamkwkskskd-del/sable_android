@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
     inputs:
       loader:
-        description: 'Target Modloader'
         required: true
         default: 'neoforge'
         type: choice
@@ -12,10 +11,9 @@ on:
           - neoforge
           - fabric
       build_ref:
-        description: 'Tag or Branch to build'
         required: true
         default: 'main'
-        
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.inputs.build_ref }}-${{ github.event.inputs.loader }}
   cancel-in-progress: true
@@ -28,38 +26,35 @@ jobs:
   build-sable:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout sources
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.build_ref }}
           fetch-depth: 0
 
-      - name: set loader environment
-        run: |
+      - run: |
           echo "LOADER=${{ github.event.inputs.loader }}" >> $GITHUB_ENV
           echo "VERSION_NAME=${{ github.event.inputs.build_ref }}" >> $GITHUB_ENV
 
-      - name: setup java 21
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: 21
           cache: gradle
 
-      - name: setup rust for aarch64
-        uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-01-29
           targets: aarch64-linux-android
           components: rust-src
 
-      - name: install rust-src
-        run: rustup component add rust-src
-
-      - name: install android ndk
-        run: |
+      - run: |
           echo "y" | sudo ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.2.9519653"
-          echo "ANDROID_NDK_HOME=${ANDROID_SDK_ROOT}/ndk/25.2.9519653" >> $GITHUB_ENV
+          NDK_PATH="${ANDROID_SDK_ROOT}/ndk/25.2.9519653"
+          CLANG_PATH="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
+          echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
+          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CLANG_PATH" >> $GITHUB_ENV
+          echo "CC_aarch64_linux_android=$CLANG_PATH" >> $GITHUB_ENV
+          echo "AR_aarch64_linux_android=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar" >> $GITHUB_ENV
 
       - name: build imgui
         run: |
@@ -70,46 +65,13 @@ jobs:
           ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
           cd imgui-binding/build/jni
           ant -Denvs=android -Dndk.path=$ANDROID_NDK_HOME -Dabi=arm64-v8a compile-natives
-          
           mkdir -p $GITHUB_WORKSPACE/imgui-native-android
-          
-          IMGUI_BIN=$(find $GITHUB_WORKSPACE/imgui-java -name "libimgui-java64.so" | head -n 1)
-          
-          if [ -n "$IMGUI_BIN" ]; then
-            echo "found imgui binary at: $IMGUI_BIN"
-            cp "$IMGUI_BIN" $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so
-          else
-            echo "imgui binary not found" && exit 1
-          fi
-
-      - name: build rapier
-        run: |
-          RUST_DIR=$(dirname $(find . -name "Cargo.toml" | grep -v "imgui" | head -n 1))
-          echo "Building Rust project in: $RUST_DIR"
-          cd "$RUST_DIR"
-          
-          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
-          export CC_aarch64_linux_android=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
-          
-          cargo build --target aarch64-linux-android --release --target-dir $GITHUB_WORKSPACE/cargo_out
-          
-          mkdir -p $GITHUB_WORKSPACE/rapier-native-android
-          
-          RAPIER_BIN=$(find $GITHUB_WORKSPACE/cargo_out/aarch64-linux-android/release -name "*.so" | head -n 1)
-          
-          if [ -n "$RAPIER_BIN" ] && [ -f "$RAPIER_BIN" ]; then
-            echo "found rapier binary at: $RAPIER_BIN"
-            cp "$RAPIER_BIN" $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so
-          else
-            echo "rapier binary not found in $GITHUB_WORKSPACE/cargo_out"
-            find $GITHUB_WORKSPACE/cargo_out -maxdepth 5
-            exit 1
-          fi
+          cp $(find . -name "libimgui-java64.so" | head -n 1) $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so
 
       - name: build mod
         run: |
           chmod +x ./gradlew
-          ./gradlew :${{ env.LOADER }}:assemble -x common:buildRustNatives
+          ./gradlew :${{ env.LOADER }}:assemble
 
       - name: perform jar-jar
         run: |
@@ -117,9 +79,7 @@ jobs:
           SABLE_JAR=$(find ${{ env.LOADER }}/build/libs -name "sable-*.jar" ! -name "*-sources.jar" | head -n 1)
           FINAL_NAME="sable-ANDROID-${{ github.event.inputs.build_ref }}.jar"
           cp "$SABLE_JAR" "final/$FINAL_NAME"
-          
           cd final
-          zip -u -j "$FINAL_NAME" ../rapier-native-android/sable_rapier_aarch64_linux.so
           
           VEIL_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep "veil-.*\.jar" | awk '{print $4}' | head -n 1 | tr -d '\r')
           unzip "$FINAL_NAME" "$VEIL_INTERNAL_PATH" -d .
@@ -130,13 +90,21 @@ jobs:
           mkdir -p "$TARGET_DIR"
           cp ../imgui-native-android/libimgui-java64.so "$TARGET_DIR/libimgui-java64.so"
           
-          cd veil_patch && zip -r ../patched_veil.jar . && cd ..
+          cd veil_patch
+          zip -r ../patched_veil.jar .
+          cd ..
+          
           mv patched_veil.jar "$VEIL_INTERNAL_PATH"
           zip -d "$FINAL_NAME" "META-INF/*.SF" "META-INF/*.RSA" "META-INF/*.DSA" || true
           zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
           
-          echo "ASSET_PATH=final/$FINAL_NAME" >> $GITHUB_ENV
+          RAPIER_SO=$(find ../ -name "*.so" | grep "release" | grep -v "imgui" | head -n 1)
+          if [ -n "$RAPIER_SO" ]; then
+            zip -u -j "$FINAL_NAME" "$RAPIER_SO"
+          fi
           
+          echo "ASSET_PATH=final/$FINAL_NAME" >> $GITHUB_ENV
+
       - name: release
         uses: softprops/action-gh-release@v2
         with:
