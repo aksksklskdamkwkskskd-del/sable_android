@@ -73,16 +73,13 @@ jobs:
           
           mkdir -p $GITHUB_WORKSPACE/imgui-native-android
           
-          IMGUI_BIN=$(find $GITHUB_WORKSPACE/imgui-java -name "libimgui-java64.so" | grep "android" | head -n 1)
-          if [ -z "$IMGUI_BIN" ]; then 
-            echo "libimgui-java64 not found, trying fallback"
-            IMGUI_BIN=$(find $GITHUB_WORKSPACE/imgui-java -name "libimgui-java64.so" | head -n 1)
-          fi
+          IMGUI_BIN=$(find $GITHUB_WORKSPACE/imgui-java -name "libimgui-java64.so" | head -n 1)
           
           if [ -n "$IMGUI_BIN" ]; then
+            echo "found imgui binary at: $IMGUI_BIN"
             cp "$IMGUI_BIN" $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so
           else
-            echo "libimgui-java64.so not found" && exit 1
+            echo "imgui binary not found" && exit 1
           fi
 
       - name: build rapier
@@ -91,19 +88,20 @@ jobs:
           cd $RUST_DIR
           export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
           export CC_aarch64_linux_android=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
+          
           cargo build --target aarch64-linux-android --release
           
           mkdir -p $GITHUB_WORKSPACE/rapier-native-android
           
-          RAPIER_BIN=$(find $GITHUB_WORKSPACE -name "libsable_rapier_aarch64_linux.so" | head -n 1)
-          if [ -z "$RAPIER_BIN" ]; then 
-            RAPIER_BIN=$(find $GITHUB_WORKSPACE/target/aarch64-linux-android/release -name "*.so" | head -n 1)
-          fi
+          RAPIER_BIN=$(find $GITHUB_WORKSPACE -path "*/aarch64-linux-android/release/*.so" -not -path "*/imgui-java/*" | head -n 1)
           
           if [ -n "$RAPIER_BIN" ]; then
+            echo "found rapier binary at: $RAPIER_BIN"
             cp "$RAPIER_BIN" $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so
           else
-            echo "rapier binary not found" && exit 1
+            echo "rapier binary not found"
+            find $GITHUB_WORKSPACE -maxdepth 4 -name "target"
+            exit 1
           fi
 
       - name: build mod
