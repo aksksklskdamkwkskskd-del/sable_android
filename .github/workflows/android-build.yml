@@ -20,6 +20,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.inputs.build_ref }}-${{ github.event.inputs.loader }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+  actions: write
+
 jobs:
   build-sable:
     runs-on: ubuntu-latest
