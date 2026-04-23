@@ -65,7 +65,7 @@ jobs:
 
       - name: build imgui
         run: |
-          sudo apt-get update && sudo apt-get install -y ant tree
+          sudo apt-get update && sudo apt-get install -y ant
           git clone --depth 1 https://github.com/SpaiR/imgui-java.git
           cd imgui-java
           chmod +x ./gradlew
@@ -76,23 +76,15 @@ jobs:
           ant clean
           ant -Denvs=android -Dndk.path=$ANDROID_NDK_HOME -Dabi=arm64-v8a compile-natives
           
-          mkdir -p $GITHUB_WORKSPACE/imgui-native-android
-          
-          cd ../../..
-          IMGUI_SO=$(find . -name "libimgui-java*.so" | grep "arm64-v8a" | head -n 1)
+          IMGUI_SO=$(find ../libsNative/android/arm64-v8a -name "*.so" | head -n 1)
           
           if [ -z "$IMGUI_SO" ]; then
-            echo "imgui binary not found, trying fallback"
-            IMGUI_SO=$(find . -name "libimgui-java*.so" | head -n 1)
-          fi
-
-          if [ -z "$IMGUI_SO" ]; then
-            echo "imgui binary not found"
-            tree
+            echo "imgui not found"
             exit 1
           fi
 
-          echo "SUCCESS, binary at $IMGUI_SO"
+          mkdir -p $GITHUB_WORKSPACE/imgui-native-android
+          echo "found imgui at $IMGUI_SO"
           cp "$IMGUI_SO" $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so
                 
       - name: build mod
@@ -103,16 +95,14 @@ jobs:
       - name: perform jar-jar
         run: |
           mkdir -p final
-          
-          SABLE_JAR=$(find ${{ env.LOADER }} -name "sable-*.jar" | grep -v "sources" | grep -v "dev" | head -n 1)
+          SABLE_JAR=$(find ${{ env.LOADER }}/build/libs -name "sable-*.jar" ! -name "*-sources.jar" | head -n 1)
           FINAL_NAME="sable-ANDROID-${{ github.event.inputs.build_ref }}.jar"
           cp "$SABLE_JAR" "final/$FINAL_NAME"
           
-          mkdir -p final/natives/sable_rapier/
-          cp rapier-native-android/sable_rapier_aarch64_linux.so final/natives/sable_rapier/
+          mkdir -p final/natives/sable_rapier
+          cp "$GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so" final/natives/sable_rapier/
           
           cd final
-          
           zip -u "$FINAL_NAME" natives/sable_rapier/sable_rapier_aarch64_linux.so
           
           VEIL_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep "veil-.*\.jar" | awk '{print $4}' | head -n 1 | tr -d '\r')
@@ -120,9 +110,15 @@ jobs:
           
           mkdir -p veil_patch
           unzip "$VEIL_INTERNAL_PATH" -d veil_patch/
-          TARGET_DIR="veil_patch/io/imgui/java/native-bin/linux-aarch64"
-          mkdir -p "$TARGET_DIR"
-          cp ../imgui-native-android/libimgui-java64.so "$TARGET_DIR/libimgui-java64.so"
+          
+          TARGET_DIR_1="veil_patch/io/imgui/java/native-bin/linux-aarch64"
+          TARGET_DIR_2="veil_patch/natives/linux-aarch64"
+          
+          mkdir -p "$TARGET_DIR_1"
+          mkdir -p "$TARGET_DIR_2"
+          
+          cp "$GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so" "$TARGET_DIR_1/libimgui-java64.so"
+          cp "$GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so" "$TARGET_DIR_2/libimgui-java64.so"
           
           cd veil_patch
           zip -r ../patched_veil.jar .
