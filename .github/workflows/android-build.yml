@@ -74,16 +74,20 @@ jobs:
           ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all \
             -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
           
+          cd imgui-binding/build/jni
+          ant -Denvs=android -Dndk.path=$ANDROID_NDK_HOME -Dabi=arm64-v8a all
+          cd ../../../
+          
           mkdir -p ../imgui-native-android
-          LIB_PATH=$(find . -path "*/android/arm64-v8a/*" -name "libimgui-java64.so" | head -n 1)
+          LIB_PATH=$(find imgui-binding/build -path "*/android/arm64-v8a/*" -name "*.so" | head -n 1)
           
           if [ -z "$LIB_PATH" ]; then
-            cd imgui-binding/build/jni
-            ant -Denvs=android -Dndk.path=$ANDROID_NDK_HOME -Dabi=arm64-v8a all
-            cd ../../../
-            LIB_PATH=$(find . -path "*/android/arm64-v8a/*" -name "libimgui-java64.so" | head -n 1)
+            echo "libimgui-java.so not found"
+            find imgui-binding/build -name "*.so"
+            exit 1
           fi
           
+          echo "found library at: $LIB_PATH"
           cp "$LIB_PATH" ../imgui-native-android/libimgui-java64.so
           cd ..
 
@@ -102,7 +106,7 @@ jobs:
           cd $GITHUB_WORKSPACE
           mkdir -p rapier-native-android
           find $RUST_DIR/target/aarch64-linux-android/release -name "*.so" -exec cp {} rapier-native-android/sable_rapier_aarch64_linux.so \;
-
+          
       - name: build the mod
         run: |
           chmod +x ./gradlew
@@ -116,7 +120,6 @@ jobs:
           cp "$SABLE_JAR" "final/$FINAL_NAME"
           
           cd final
-          
           zip -u -j "$FINAL_NAME" ../rapier-native-android/sable_rapier_aarch64_linux.so
           
           VEIL_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep "veil-.*\.jar" | awk '{print $4}' | head -n 1 | tr -d '\r')
@@ -133,13 +136,12 @@ jobs:
           cd ..
           
           mv patched_veil.jar "$VEIL_INTERNAL_PATH"
-          
           zip -d "$FINAL_NAME" "META-INF/*.SF" "META-INF/*.RSA" "META-INF/*.DSA" || true
           zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
-          
+
           echo "ASSET_PATH=final/$FINAL_NAME" >> $GITHUB_ENV
           echo "FINAL_NAME=$FINAL_NAME" >> $GITHUB_ENV
-
+          
       - name: release
         uses: softprops/action-gh-release@v2
         with:
