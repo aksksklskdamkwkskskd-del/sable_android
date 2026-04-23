@@ -200,7 +200,7 @@ jobs:
           mkdir -p veil_internals
           unzip "$VEIL_PATH" -d veil_internals/
           
-          TARGET_DIR="veil_internals/io/imgui/java/native-bin"
+          TARGET_DIR="veil_internals/io/imgui/java/native-bin/linux-aarch64"
           mkdir -p "$TARGET_DIR"
           cp ../imgui-dir/libimgui-java64.so "$TARGET_DIR/libimgui-java64.so"
           
@@ -210,7 +210,9 @@ jobs:
           
           VEIL_INTERNAL_PATH=$(find . -type f -name "veil-*.jar" | head -n 1 | sed 's|^\./||')
           mv updated_veil.jar "$VEIL_INTERNAL_PATH"
-          zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
+          
+          zip -d "$FINAL_NAME" "META-INF/*.SF" "META-INF/*.RSA" "META-INF/*.DSA" || true
+          zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH
           
           echo "ASSET_PATH=final/$FINAL_NAME" >> $GITHUB_ENV
           echo "FINAL_NAME=$FINAL_NAME" >> $GITHUB_ENV
