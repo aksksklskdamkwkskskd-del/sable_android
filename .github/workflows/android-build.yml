@@ -66,44 +66,32 @@ jobs:
           cd imgui-java
           chmod +x ./gradlew
           
-          ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
-          
-          cd imgui-binding/build/jni
-          
-          ant -Denvs=android -Dndk.path=$ANDROID_NDK_HOME -Dabi=arm64-v8a compile-natives
+          ./gradlew :imgui-binding:buildNatives -Denvs=android -Dlocal -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
           
           mkdir -p $GITHUB_WORKSPACE/imgui-native-android
           
-          IMGUI_SO=$(find ../libsNative/android/arm64-v8a -name "*.so" | head -n 1)
+          IMGUI_SO=$(find . -name "*.so" | grep "arm64-v8a" | head -n 1)
           
           if [ -z "$IMGUI_SO" ]; then
-            echo "imgui not found, searching again"
-            IMGUI_SO=$(find .. -name "libimgui-java*.so" | head -n 1)
-          fi
-
-          if [ -z "$IMGUI_SO" ]; then
-            echo "imgui binary not found"
+            echo "imgui not found"
             exit 1
           fi
 
           cp "$IMGUI_SO" $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so
-
-      - name: build rapier (marten) manually
+          
+      - name: setup paths and environment
         run: |
-          cd common/src/main/rust/marten
+          echo "y" | sudo ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.2.9519653"
+          NDK_PATH="${ANDROID_SDK_ROOT}/ndk/25.2.9519653"
+          echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
           
-          cargo build --target aarch64-linux-android --release
+          TOOLCHAIN="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          CLANG="$TOOLCHAIN/aarch64-linux-android24-clang"
           
-          mkdir -p $GITHUB_WORKSPACE/rapier-native-android
+          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CLANG" >> $GITHUB_ENV
+          echo "CC_aarch64_linux_android=$CLANG" >> $GITHUB_ENV
+          echo "AR_aarch64_linux_android=$TOOLCHAIN/llvm-ar" >> $GITHUB_ENV
           
-          RAPIER_SO=$(find ../../../../target/aarch64-linux-android/release -name "libmarten.so" | head -n 1)
-          
-          if [ -z "$RAPIER_SO" ]; then
-            echo "rapier binary not found"
-            exit 1
-          fi
-          
-          cp "$RAPIER_SO" $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so
       - name: build mod
         run: |
           chmod +x ./gradlew
@@ -113,7 +101,7 @@ jobs:
         run: |
           mkdir -p final
           
-          SABLE_JAR=$(find ${{ env.LOADER }}/build/libs -name "sable-*.jar" ! -name "*-sources.jar" | head -n 1)
+          SABLE_JAR=$(find ${{ env.LOADER }} -name "sable-*.jar" | grep -v "sources" | grep -v "dev" | head -n 1)
           FINAL_NAME="sable-ANDROID-${{ github.event.inputs.build_ref }}.jar"
           cp "$SABLE_JAR" "final/$FINAL_NAME"
           
