@@ -59,26 +59,27 @@ jobs:
 
       - name: build imgui
         run: |
-          sudo apt-get update && sudo apt-get install -y tree
+          sudo apt-get update && sudo apt-get install -y tree ant
           
           git clone --depth 1 https://github.com/SpaiR/imgui-java.git
           cd imgui-java
           chmod +x ./gradlew
           
           export ANDROID_NDK_HOME=$ANDROID_NDK_HOME
-          export NDK_HOME=$ANDROID_NDK_HOME
+          export PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$ANDROID_NDK_HOME:$PATH
           
           ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal \
             -PandroidNdkPath=$ANDROID_NDK_HOME \
-            -PandroidAbi=arm64-v8a
+            -PandroidAbi=arm64-v8a \
+            --stacktrace
           
           mkdir -p ../imgui-native-android
           
           LIB_PATH=$(find imgui-binding/build -name "libimgui-java64.so" | head -n 1)
           if [ -z "$LIB_PATH" ]; then
             echo "libimgui-java64.so not found."
-            echo "--- FILES ---"
-            tree imgui-binding/build
+            echo "JNI build tree"
+            tree imgui-binding/build/jni
             exit 1
           fi
           cp "$LIB_PATH" ../imgui-native-android/
