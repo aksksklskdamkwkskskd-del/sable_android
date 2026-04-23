@@ -10,6 +10,11 @@
 </div>
 </h1>
 
+# IMPORTANT
+> [!IMPORTANT]
+> Builds are broken and being tested at the moment.
+> Please wait for new fixed releases.
+
 # What
 
 This is Create Simulated's -> <a href=https://github.com/ryanhcode/sable>Sable</a> engine, ported to android.
