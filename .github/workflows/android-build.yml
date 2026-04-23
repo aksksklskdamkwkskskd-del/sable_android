@@ -212,7 +212,7 @@ jobs:
           mv updated_veil.jar "$VEIL_INTERNAL_PATH"
           
           zip -d "$FINAL_NAME" "META-INF/*.SF" "META-INF/*.RSA" "META-INF/*.DSA" || true
-          zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH
+          zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
           
           echo "ASSET_PATH=final/$FINAL_NAME" >> $GITHUB_ENV
           echo "FINAL_NAME=$FINAL_NAME" >> $GITHUB_ENV
