@@ -85,22 +85,24 @@ jobs:
       - name: build rapier
         run: |
           RUST_DIR=$(dirname $(find . -name "Cargo.toml" | grep -v "imgui" | head -n 1))
-          cd $RUST_DIR
+          echo "Building Rust project in: $RUST_DIR"
+          cd "$RUST_DIR"
+          
           export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
           export CC_aarch64_linux_android=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
           
-          cargo build --target aarch64-linux-android --release
+          cargo build --target aarch64-linux-android --release --target-dir $GITHUB_WORKSPACE/cargo_out
           
           mkdir -p $GITHUB_WORKSPACE/rapier-native-android
           
-          RAPIER_BIN=$(find $GITHUB_WORKSPACE -path "*/aarch64-linux-android/release/*.so" -not -path "*/imgui-java/*" | head -n 1)
+          RAPIER_BIN=$(find $GITHUB_WORKSPACE/cargo_out/aarch64-linux-android/release -name "*.so" | head -n 1)
           
-          if [ -n "$RAPIER_BIN" ]; then
+          if [ -n "$RAPIER_BIN" ] && [ -f "$RAPIER_BIN" ]; then
             echo "found rapier binary at: $RAPIER_BIN"
             cp "$RAPIER_BIN" $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so
           else
-            echo "rapier binary not found"
-            find $GITHUB_WORKSPACE -maxdepth 4 -name "target"
+            echo "rapier binary not found in $GITHUB_WORKSPACE/cargo_out"
+            find $GITHUB_WORKSPACE/cargo_out -maxdepth 5
             exit 1
           fi
 
