@@ -61,7 +61,8 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/SpaiR/imgui-java.git
           cd imgui-java/imgui-binding
-          ./gradlew generateLibs -Denvs=linux -Dlocal \
+          chmod +x ../gradlew
+          ../gradlew generateLibs -Denvs=linux -Dlocal \
             -PandroidNdkPath=$ANDROID_NDK_HOME \
             -PandroidAbi=arm64-v8a
           mkdir -p ../../imgui-native-android
@@ -87,7 +88,6 @@ jobs:
           mkdir -p veil_internals
           unzip "$VEIL_PATH" -d veil_internals/
           
-          # Injecting the REAL Android-built library
           TARGET_DIR="veil_internals/io/imgui/java/native-bin/linux-aarch64"
           mkdir -p "$TARGET_DIR"
           cp ../imgui-native-android/libimgui-java64.so "$TARGET_DIR/libimgui-java64.so"
