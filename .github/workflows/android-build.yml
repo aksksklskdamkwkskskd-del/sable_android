@@ -65,11 +65,28 @@ jobs:
           git clone --depth 1 https://github.com/SpaiR/imgui-java.git
           cd imgui-java
           chmod +x ./gradlew
+          
           ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
+          
           cd imgui-binding/build/jni
+          
           ant -Denvs=android -Dndk.path=$ANDROID_NDK_HOME -Dabi=arm64-v8a compile-natives
+          
           mkdir -p $GITHUB_WORKSPACE/imgui-native-android
-          cp $(find . -name "libimgui-java64.so" | head -n 1) $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so
+          
+          IMGUI_SO=$(find ../libsNative/android/arm64-v8a -name "*.so" | head -n 1)
+          
+          if [ -z "$IMGUI_SO" ]; then
+            echo "imgui not found, searching again"
+            IMGUI_SO=$(find .. -name "libimgui-java*.so" | head -n 1)
+          fi
+
+          if [ -z "$IMGUI_SO" ]; then
+            echo "imgui binary not found"
+            exit 1
+          fi
+
+          cp "$IMGUI_SO" $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so
 
       - name: build rapier (marten) manually
         run: |
