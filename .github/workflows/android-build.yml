@@ -70,8 +70,20 @@ jobs:
           ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
           cd imgui-binding/build/jni
           ant -Denvs=android -Dndk.path=$ANDROID_NDK_HOME -Dabi=arm64-v8a compile-natives
+          
           mkdir -p $GITHUB_WORKSPACE/imgui-native-android
-          cp $(find . -name "libimgui-java64.so" | grep "android" | head -n 1) $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so
+          
+          IMGUI_BIN=$(find $GITHUB_WORKSPACE/imgui-java -name "libimgui-java64.so" | grep "android" | head -n 1)
+          if [ -z "$IMGUI_BIN" ]; then 
+            echo "libimgui-java64 not found, trying fallback"
+            IMGUI_BIN=$(find $GITHUB_WORKSPACE/imgui-java -name "libimgui-java64.so" | head -n 1)
+          fi
+          
+          if [ -n "$IMGUI_BIN" ]; then
+            cp "$IMGUI_BIN" $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so
+          else
+            echo "libimgui-java64.so not found" && exit 1
+          fi
 
       - name: build rapier
         run: |
@@ -79,13 +91,19 @@ jobs:
           cd $RUST_DIR
           export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
           export CC_aarch64_linux_android=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
-          
           cargo build --target aarch64-linux-android --release
           
           mkdir -p $GITHUB_WORKSPACE/rapier-native-android
-          find $GITHUB_WORKSPACE -name "libsable_rapier_aarch64_linux.so" -exec cp {} $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so \;
-          if [ ! -f "$GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so" ]; then
-            find $GITHUB_WORKSPACE/target -name "*.so" -not -path "*/imgui-java/*" -exec cp {} $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so \;
+          
+          RAPIER_BIN=$(find $GITHUB_WORKSPACE -name "libsable_rapier_aarch64_linux.so" | head -n 1)
+          if [ -z "$RAPIER_BIN" ]; then 
+            RAPIER_BIN=$(find $GITHUB_WORKSPACE/target/aarch64-linux-android/release -name "*.so" | head -n 1)
+          fi
+          
+          if [ -n "$RAPIER_BIN" ]; then
+            cp "$RAPIER_BIN" $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so
+          else
+            echo "rapier binary not found" && exit 1
           fi
 
       - name: build mod
