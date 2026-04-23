@@ -65,52 +65,46 @@ jobs:
 
       - name: build imgui
         run: |
-          sudo apt-get update && sudo apt-get install -y ant tree
-          git clone --depth 1 https://github.com/SpaiR/imgui-java.git
           cd imgui-java
-          chmod +x ./gradlew
-          
           ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
+         
+          cd imgui-binding/src/main/cpp
           
-          echo "--- FILES, imgui-binding/build -L 4 ---"
-          tree imgui-binding/build -L 4
-          
-          echo "--- SEARCH .mk ---"
-          find . -name "*.mk"
-          
-          MK_PATH=$(find . -name "Android.mk" | head -n 1)
+          cat <<EOF > Application.mk
+          APP_ABI := arm64-v8a
+          APP_PLATFORM := android-24
+          APP_STL := c++_static
+          APP_CPPFLAGS := -frtti -fexceptions
+          EOF
 
-          echo "--- ALL FILES ---"
-          tree -L 5
-          echo "--- ALL FILES ---"
-          
-          if [ -z "$MK_PATH" ]; then
-            echo "Android.mk not found"
-            tree imgui-binding/src/main/cpp
-            exit 1
-          fi
-          
-          JNI_DIR=$(dirname "$MK_PATH")
-          echo "found Android.mk at $JNI_DIR"
-          
-          $ANDROID_NDK_HOME/ndk-build -C "$JNI_DIR" \
-            NDK_PROJECT_PATH=. \
-            APP_BUILD_SCRIPT=Android.mk \
-            APP_ABI=arm64-v8a \
-            APP_PLATFORM=android-24
-          
-          mkdir -p $GITHUB_WORKSPACE/imgui-native-android
-          
-          IMGUI_SO=$(find . -name "libimgui-java.so" | grep "arm64-v8a" | head -n 1)
-          
-          if [ -z "$IMGUI_SO" ]; then
-            echo "imgui not found"
-            find . -name "*.so"
-            exit 1
-          fi
+          cat <<EOF > Android.mk
+          LOCAL_PATH := \$(call my-dir)
+          include \$(CLEAR_VARS)
 
-          cp "$IMGUI_SO" $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so
-          echo "SUCCESS, imgui at $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so"
+          LOCAL_MODULE := imgui-java64
+          
+          LOCAL_C_INCLUDES := \$(LOCAL_PATH) \\
+                              \$(LOCAL_PATH)/../../../include \\
+                              \$(LOCAL_PATH)/../../../include/imgui \\
+                              \$(LOCAL_PATH)/../../../include/implot \\
+                              \$(LOCAL_PATH)/../../../include/imnodes \\
+                              \$(LOCAL_PATH)/../../../include/ImGuiColorTextEdit \\
+                              \$(LOCAL_PATH)/../../../include/ImGuiFileDialog
+
+          LOCAL_SRC_FILES := \$(wildcard \$(LOCAL_PATH)/*.cpp)
+          
+          LOCAL_SRC_FILES += \$(wildcard \$(LOCAL_PATH)/../../../include/imgui/*.cpp)
+          LOCAL_SRC_FILES += \$(wildcard \$(LOCAL_PATH)/../../../include/implot/*.cpp)
+          LOCAL_SRC_FILES += \$(wildcard \$(LOCAL_PATH)/../../../include/imnodes/*.cpp)
+
+          LOCAL_LDLIBS := -llog -landroid
+          include \$(BUILD_SHARED_LIBRARY)
+          EOF
+
+          $ANDROID_NDK_HOME/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk NDK_APPLICATION_MK=Application.mk
+
+          mkdir -p ../../../../../imgui-native-android
+          cp libs/arm64-v8a/libimgui-java64.so ../../../../../imgui-native-android/
           
       - name: build rapier (rust natives)
         run: |
