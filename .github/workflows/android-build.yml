@@ -59,6 +59,8 @@ jobs:
 
       - name: build imgui
         run: |
+          sudo apt-get update && sudo apt-get install -y tree
+          
           git clone --depth 1 https://github.com/SpaiR/imgui-java.git
           cd imgui-java
           chmod +x ./gradlew
@@ -74,7 +76,9 @@ jobs:
           
           LIB_PATH=$(find imgui-binding/build -name "libimgui-java64.so" | head -n 1)
           if [ -z "$LIB_PATH" ]; then
-            echo "libimgui-java64 not found."
+            echo "libimgui-java64.so not found."
+            echo "--- FILES ---"
+            tree imgui-binding/build
             exit 1
           fi
           cp "$LIB_PATH" ../imgui-native-android/
