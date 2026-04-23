@@ -71,7 +71,16 @@ jobs:
           
           ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
           
-          cd imgui-binding/src/main/cpp
+          JNI_SRC_DIR=$(find $(pwd) -name "jni_common.cpp" -exec dirname {} \;)
+          
+          if [ -z "$JNI_SRC_DIR" ]; then
+            echo "JNI source files not found"
+            tree . -L 4
+            exit 1
+          fi
+          
+          echo "found JNI sources at: $JNI_SRC_DIR"
+          cd "$JNI_SRC_DIR"
           
           cat <<EOF > Application.mk
           APP_ABI := arm64-v8a
@@ -85,13 +94,13 @@ jobs:
           include \$(CLEAR_VARS)
 
           LOCAL_MODULE := imgui-java64
-          
+
           LOCAL_C_INCLUDES := \$(LOCAL_PATH) \\
                               \$(LOCAL_PATH)/../../../include \\
                               \$(LOCAL_PATH)/../../../include/imgui \\
                               \$(LOCAL_PATH)/../../../include/implot \\
                               \$(LOCAL_PATH)/../../../include/imnodes
-          
+
           LOCAL_SRC_FILES := \$(wildcard \$(LOCAL_PATH)/*.cpp)
           
           LOCAL_SRC_FILES += \$(wildcard \$(LOCAL_PATH)/../../../include/imgui/*.cpp)
@@ -103,18 +112,19 @@ jobs:
           EOF
 
           tree -L 3
-          
+
           $ANDROID_NDK_HOME/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk NDK_APPLICATION_MK=Application.mk
 
-          mkdir -p ../../../../../imgui-native-android
+          ROOT_DIR="/home/runner/work/sable_android/sable_android"
+          mkdir -p "$ROOT_DIR/imgui-native-android"
+          
           if [ -f "libs/arm64-v8a/libimgui-java64.so" ]; then
-            cp libs/arm64-v8a/libimgui-java64.so ../../../../../imgui-native-android/
-            echo "SUCCESS, copied imgui"
+            cp libs/arm64-v8a/libimgui-java64.so "$ROOT_DIR/imgui-native-android/"
+            echo "--- SUCCESFUL ---"
           else
-            echo "imgui not found"
+            echo "imgui not found, at $(pwd)/libs/arm64-v8a/"
             find . -name "*.so"
-            echo "--- FILES ---"
-            tree -L 3
+            tree -L 4
             exit 1
           fi
           
