@@ -31,30 +31,33 @@ jobs:
           ref: ${{ github.event.inputs.build_ref }}
           fetch-depth: 0
 
-      - run: |
+      - name: setting version variables
+        run: |
           echo "LOADER=${{ github.event.inputs.loader }}" >> $GITHUB_ENV
           echo "VERSION_NAME=${{ github.event.inputs.build_ref }}" >> $GITHUB_ENV
 
-      - uses: actions/setup-java@v4
+      - name: setup java
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: 21
           cache: gradle
 
-      - uses: dtolnay/rust-toolchain@master
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-01-29
           targets: aarch64-linux-android
           components: rust-src
 
-      - run: |
+      - name: setup paths and environment
+        run: |
           echo "y" | sudo ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.2.9519653"
-          NDK_PATH="${ANDROID_SDK_ROOT}/ndk/25.2.9519653"
-          CLANG_PATH="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
-          echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=${ANDROID_SDK_ROOT}/ndk/25.2.9519653" >> $GITHUB_ENV
+          
+          CLANG_PATH="${ANDROID_SDK_ROOT}/ndk/25.2.9519653/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
           echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CLANG_PATH" >> $GITHUB_ENV
           echo "CC_aarch64_linux_android=$CLANG_PATH" >> $GITHUB_ENV
-          echo "AR_aarch64_linux_android=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar" >> $GITHUB_ENV
 
       - name: build imgui
         run: |
@@ -68,10 +71,18 @@ jobs:
           mkdir -p $GITHUB_WORKSPACE/imgui-native-android
           cp $(find . -name "libimgui-java64.so" | head -n 1) $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so
 
+      - name: build rapier (marten) manually
+        run: |
+          cd common/src/main/rust/marten
+          cargo build --target aarch64-linux-android --release
+          
+          mkdir -p $GITHUB_WORKSPACE/rapier-native-android
+          cp ../../../../target/aarch64-linux-android/release/libmarten.so $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so
+
       - name: build mod
         run: |
           chmod +x ./gradlew
-          ./gradlew :${{ env.LOADER }}:assemble
+          ./gradlew :${{ env.LOADER }}:assemble -x common:buildRustNatives
 
       - name: perform jar-jar
         run: |
@@ -79,7 +90,12 @@ jobs:
           SABLE_JAR=$(find ${{ env.LOADER }}/build/libs -name "sable-*.jar" ! -name "*-sources.jar" | head -n 1)
           FINAL_NAME="sable-ANDROID-${{ github.event.inputs.build_ref }}.jar"
           cp "$SABLE_JAR" "final/$FINAL_NAME"
+          
+          mkdir -p final/natives/sable_rapier
+          cp rapier-native-android/sable_rapier_aarch64_linux.so final/natives/sable_rapier/
+          
           cd final
+          zip -u "$FINAL_NAME" natives/sable_rapier/sable_rapier_aarch64_linux.so
           
           VEIL_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep "veil-.*\.jar" | awk '{print $4}' | head -n 1 | tr -d '\r')
           unzip "$FINAL_NAME" "$VEIL_INTERNAL_PATH" -d .
@@ -97,11 +113,6 @@ jobs:
           mv patched_veil.jar "$VEIL_INTERNAL_PATH"
           zip -d "$FINAL_NAME" "META-INF/*.SF" "META-INF/*.RSA" "META-INF/*.DSA" || true
           zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
-          
-          RAPIER_SO=$(find ../ -name "*.so" | grep "release" | grep -v "imgui" | head -n 1)
-          if [ -n "$RAPIER_SO" ]; then
-            zip -u -j "$FINAL_NAME" "$RAPIER_SO"
-          fi
           
           echo "ASSET_PATH=final/$FINAL_NAME" >> $GITHUB_ENV
 
