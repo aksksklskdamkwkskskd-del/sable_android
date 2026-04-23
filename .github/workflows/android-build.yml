@@ -53,35 +53,6 @@ jobs:
       - name: setup paths and environment
         run: |
           echo "y" | sudo ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.2.9519653"
-          echo "ANDROID_NDK_HOME=${ANDROID_SDK_ROOT}/ndk/25.2.9519653" >> $GITHUB_ENV
-          
-          CLANG_PATH="${ANDROID_SDK_ROOT}/ndk/25.2.9519653/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
-          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CLANG_PATH" >> $GITHUB_ENV
-          echo "CC_aarch64_linux_android=$CLANG_PATH" >> $GITHUB_ENV
-
-      - name: build imgui
-        run: |
-          sudo apt-get update && sudo apt-get install -y ant
-          git clone --depth 1 https://github.com/SpaiR/imgui-java.git
-          cd imgui-java
-          chmod +x ./gradlew
-          
-          ./gradlew :imgui-binding:buildNatives -Denvs=android -Dlocal -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
-          
-          mkdir -p $GITHUB_WORKSPACE/imgui-native-android
-          
-          IMGUI_SO=$(find . -name "*.so" | grep "arm64-v8a" | head -n 1)
-          
-          if [ -z "$IMGUI_SO" ]; then
-            echo "imgui not found"
-            exit 1
-          fi
-
-          cp "$IMGUI_SO" $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so
-          
-      - name: setup paths and environment
-        run: |
-          echo "y" | sudo ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.2.9519653"
           NDK_PATH="${ANDROID_SDK_ROOT}/ndk/25.2.9519653"
           echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
           
@@ -91,7 +62,39 @@ jobs:
           echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CLANG" >> $GITHUB_ENV
           echo "CC_aarch64_linux_android=$CLANG" >> $GITHUB_ENV
           echo "AR_aarch64_linux_android=$TOOLCHAIN/llvm-ar" >> $GITHUB_ENV
+
+      - name: build imgui
+        run: |
+          sudo apt-get update && sudo apt-get install -y ant tree
+          git clone --depth 1 https://github.com/SpaiR/imgui-java.git
+          cd imgui-java
+          chmod +x ./gradlew
           
+          ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
+          
+          cd imgui-binding/build/jni
+          ant clean
+          ant -Denvs=android -Dndk.path=$ANDROID_NDK_HOME -Dabi=arm64-v8a compile-natives
+          
+          mkdir -p $GITHUB_WORKSPACE/imgui-native-android
+          
+          cd ../../..
+          IMGUI_SO=$(find . -name "libimgui-java*.so" | grep "arm64-v8a" | head -n 1)
+          
+          if [ -z "$IMGUI_SO" ]; then
+            echo "imgui binary not found, trying fallback"
+            IMGUI_SO=$(find . -name "libimgui-java*.so" | head -n 1)
+          fi
+
+          if [ -z "$IMGUI_SO" ]; then
+            echo "imgui binary not found"
+            tree
+            exit 1
+          fi
+
+          echo "SUCCESS, binary at $IMGUI_SO"
+          cp "$IMGUI_SO" $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so
+                
       - name: build mod
         run: |
           chmod +x ./gradlew
