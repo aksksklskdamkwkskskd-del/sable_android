@@ -56,7 +56,7 @@ jobs:
       - name: install rust-src
         run: rustup component add rust-src
 
-      - name: Install Android NDK
+      - name: install android ndk
         run: |
           echo "y" | sudo ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.2.9519653"
           echo "ANDROID_NDK_HOME=${ANDROID_SDK_ROOT}/ndk/25.2.9519653" >> $GITHUB_ENV
@@ -68,35 +68,34 @@ jobs:
           cd imgui-java
           chmod +x ./gradlew
           
+          export ANDROID_NDK_HOME=$ANDROID_NDK_HOME
+          export NDK_HOME=$ANDROID_NDK_HOME
+          
           ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all \
             -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
           
           cd imgui-binding/build/jni
           ant -Denvs=android -Dndk.path=$ANDROID_NDK_HOME -Dabi=arm64-v8a compile-natives
           
-          cd ../../../
-          mkdir -p ../imgui-native-android
-          
-          LIB_PATH=$(find imgui-binding/build/jni -name "libimgui-java64.so" | grep "android" | head -n 1)
+          cd $GITHUB_WORKSPACE
+          mkdir -p imgui-native-android
+          LIB_PATH=$(find $GITHUB_WORKSPACE/imgui-java -name "libimgui-java64.so" | grep "android" | head -n 1)
           if [ -z "$LIB_PATH" ]; then
-            echo "--- searching all ---"
-            LIB_PATH=$(find . -name "libimgui-java64.so" | head -n 1)
+            LIB_PATH=$(find $GITHUB_WORKSPACE/imgui-java -name "libimgui-java64.so" | head -n 1)
           fi
-          
-          cp "$LIB_PATH" ../imgui-native-android/libimgui-java64.so
+          cp "$LIB_PATH" imgui-native-android/libimgui-java64.so
 
-      - name: Build Rapier Physics (Android)
-        run: |
+      
+      - name: build rapier physics
+       run: |
           RUST_DIR=$(dirname $(find . -name "Cargo.toml" | grep -v "imgui" | head -n 1))
           cd $RUST_DIR
-          
           export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
           export CC_aarch64_linux_android=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
-          
           cargo build --target aarch64-linux-android --release
           
           mkdir -p $GITHUB_WORKSPACE/rapier-native-android
-          find target/aarch64-linux-android/release -name "*.so" -exec cp {} $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so \;
+          find $GITHUB_WORKSPACE -path "*/aarch64-linux-android/release/*.so" -not -path "*/imgui-java/*" -exec cp {} $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so \;
           
       - name: build the mod
         run: |
