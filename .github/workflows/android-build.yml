@@ -67,37 +67,28 @@ jobs:
           git clone --depth 1 https://github.com/SpaiR/imgui-java.git
           cd imgui-java
           chmod +x ./gradlew
-          
-          export ANDROID_NDK_HOME=$ANDROID_NDK_HOME
-          export NDK_HOME=$ANDROID_NDK_HOME
-          
-          ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all \
-            -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
-          
+          ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
           cd imgui-binding/build/jni
           ant -Denvs=android -Dndk.path=$ANDROID_NDK_HOME -Dabi=arm64-v8a compile-natives
-          
-          cd $GITHUB_WORKSPACE
-          mkdir -p imgui-native-android
-          LIB_PATH=$(find $GITHUB_WORKSPACE/imgui-java -name "libimgui-java64.so" | grep "android" | head -n 1)
-          if [ -z "$LIB_PATH" ]; then
-            LIB_PATH=$(find $GITHUB_WORKSPACE/imgui-java -name "libimgui-java64.so" | head -n 1)
-          fi
-          cp "$LIB_PATH" imgui-native-android/libimgui-java64.so
+          mkdir -p $GITHUB_WORKSPACE/imgui-native-android
+          cp $(find . -name "libimgui-java64.so" | grep "android" | head -n 1) $GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so
 
-      
-      - name: build rapier physics
+      - name: build rapier
         run: |
           RUST_DIR=$(dirname $(find . -name "Cargo.toml" | grep -v "imgui" | head -n 1))
           cd $RUST_DIR
           export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
           export CC_aarch64_linux_android=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
+          
           cargo build --target aarch64-linux-android --release
           
           mkdir -p $GITHUB_WORKSPACE/rapier-native-android
-          find $GITHUB_WORKSPACE -path "*/aarch64-linux-android/release/*.so" -not -path "*/imgui-java/*" -exec cp {} $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so \;
-          
-      - name: build the mod
+          find $GITHUB_WORKSPACE -name "libsable_rapier_aarch64_linux.so" -exec cp {} $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so \;
+          if [ ! -f "$GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so" ]; then
+            find $GITHUB_WORKSPACE/target -name "*.so" -not -path "*/imgui-java/*" -exec cp {} $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so \;
+          fi
+
+      - name: build mod
         run: |
           chmod +x ./gradlew
           ./gradlew :${{ env.LOADER }}:assemble -x common:buildRustNatives
@@ -117,15 +108,11 @@ jobs:
           
           mkdir -p veil_patch
           unzip "$VEIL_INTERNAL_PATH" -d veil_patch/
-          
           TARGET_DIR="veil_patch/io/imgui/java/native-bin/linux-aarch64"
           mkdir -p "$TARGET_DIR"
           cp ../imgui-native-android/libimgui-java64.so "$TARGET_DIR/libimgui-java64.so"
           
-          cd veil_patch
-          zip -r ../patched_veil.jar .
-          cd ..
-          
+          cd veil_patch && zip -r ../patched_veil.jar . && cd ..
           mv patched_veil.jar "$VEIL_INTERNAL_PATH"
           zip -d "$FINAL_NAME" "META-INF/*.SF" "META-INF/*.RSA" "META-INF/*.DSA" || true
           zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
