@@ -60,15 +60,17 @@ jobs:
       - name: build imgui
         run: |
           git clone --depth 1 https://github.com/SpaiR/imgui-java.git
-          cd imgui-java/imgui-binding
-          chmod +x ../gradlew
-          ../gradlew generateLibs -Denvs=linux -Dlocal \
+          cd imgui-java
+          chmod +x ./gradlew
+          
+          ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal \
             -PandroidNdkPath=$ANDROID_NDK_HOME \
             -PandroidAbi=arm64-v8a
-          mkdir -p ../../imgui-native-android
-          cp build/libsNative/linux64/libimgui-java64.so ../../imgui-native-android/
-          cd ../..
-
+          
+          mkdir -p ../imgui-native-android
+          cp imgui-binding/build/libsNative/android/arm64-v8a/libimgui-java64.so ../imgui-native-android/
+          cd ..
+        
       - name: build the mod
         run: |
           chmod +x ./gradlew
