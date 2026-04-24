@@ -149,7 +149,12 @@ jobs:
           cargo build --release --target aarch64-linux-android
           
           mkdir -p ../../../../imgui-native-android/
-          cp ../target/aarch64-linux-android/release/libsable_rapier.so ../../../../imgui-native-android/
+          
+          RESULT_SO="../target/aarch64-linux-android/release/libsable_rapier.so"
+          
+          cp "$RESULT_SO" "../../../../imgui-native-android/libsable_rapier.so"
+          cp "$RESULT_SO" "../../../../imgui-native-android/sable_rapier_aarch64_linux.so"
+          cp "$RESULT_SO" "../../../../imgui-native-android/libimgui-java64.so" # Safety backup
         env:
           CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: aarch64-linux-android24-clang
           
@@ -166,14 +171,14 @@ jobs:
           cp "$SABLE_JAR" "final/$FINAL_NAME"
           
           mkdir -p final/natives/sable_rapier
-          cp "$GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so" final/natives/sable_rapier/
+          
+          cp "$GITHUB_WORKSPACE/imgui-native-android/sable_rapier_aarch64_linux.so" final/natives/sable_rapier/
           
           cd final
           zip -u "$FINAL_NAME" natives/sable_rapier/sable_rapier_aarch64_linux.so
           
           VEIL_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep "veil-.*\.jar" | awk '{print $4}' | head -n 1 | tr -d '\r')
           unzip "$FINAL_NAME" "$VEIL_INTERNAL_PATH" -d .
-          
           mkdir -p veil_patch
           unzip "$VEIL_INTERNAL_PATH" -d veil_patch/
           
@@ -186,6 +191,8 @@ jobs:
           cp "$GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so" "$TARGET_DIR_1/libimgui-java64.so"
           cp "$GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so" "$TARGET_DIR_2/libimgui-java64.so"
           
+          cp "$GITHUB_WORKSPACE/imgui-native-android/sable_rapier_aarch64_linux.so" "$TARGET_DIR_1/sable_rapier_aarch64_linux.so"
+          
           cd veil_patch
           zip -r ../patched_veil.jar .
           cd ..
@@ -195,7 +202,7 @@ jobs:
           zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
           
           echo "ASSET_PATH=final/$FINAL_NAME" >> $GITHUB_ENV
-
+          
       - name: release
         uses: softprops/action-gh-release@v2
         with:
