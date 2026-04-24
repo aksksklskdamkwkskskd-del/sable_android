@@ -89,7 +89,7 @@ jobs:
           APP_ABI := arm64-v8a
           APP_PLATFORM := android-24
           APP_STL := c++_static
-          APP_CPPFLAGS := -frtti -fexceptions -std=c++17
+          APP_CPPFLAGS := -frtti -fexceptions -std=c++17 -DIMGUI_DEFINE_MATH_OPERATORS
           EOF
 
           cat <<EOF > Android.mk
@@ -106,17 +106,15 @@ jobs:
           LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include/implot
           LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include/imnodes
           LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include/ImGuiColorTextEdit
-          LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include/ImGuiFileDialog
           LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include/imgui-knobs
           LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include/imgui-node-editor
           LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include/imguizmo
-          
+                    
           LOCAL_SRC_FILES := \$(wildcard \$(LOCAL_PATH)/*.cpp)
           LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/imgui/*.cpp) \$(wildcard ${IMGUI_ROOT_PATH}/include/imgui/*.c)
           LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/implot/*.cpp)
           LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/imnodes/*.cpp)
           LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/ImGuiColorTextEdit/*.cpp)
-          LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/ImGuiFileDialog/*.cpp)
           LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/imgui-knobs/*.cpp)
           LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/imgui-node-editor/*.cpp)
           LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/imguizmo/*.cpp)
