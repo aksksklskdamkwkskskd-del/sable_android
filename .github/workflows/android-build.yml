@@ -67,17 +67,18 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/SpaiR/imgui-java.git
           cd imgui-java
-          chmod +x ./gradlew          
+          chmod +x ./gradlew
+          
           ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
           
-          JNI_SRC_DIR=$(find $(pwd) -name "jni_common.cpp" -exec dirname {} \; | head -n 1)
+          JNI_SRC_DIR=$(find $(pwd) -name "jni_common.cpp" -print -quit | xargs dirname)
           
           if [ -z "$JNI_SRC_DIR" ]; then
-            echo "ERROR: Could not find generated JNI source files!"
+            echo "JNI not found"
             exit 1
           fi
           
-          echo "found JNI sources, at $JNI_SRC_DIR"
+          echo "found JNI at: $JNI_SRC_DIR"
           cd "$JNI_SRC_DIR"
           
           cat <<EOF > Application.mk
@@ -93,34 +94,36 @@ jobs:
 
           LOCAL_MODULE := imgui-java64
           
-          IMGUI_ROOT := \$(LOCAL_PATH)/../../../../
+          IMGUI_ROOT := $(pwd | sed 's|/imgui-binding.*||')
           
           LOCAL_C_INCLUDES := \$(LOCAL_PATH) \\
-                              \$(IMGUI_ROOT)/include \\
-                              \$(IMGUI_ROOT)/include/imgui \\
-                              \$(IMGUI_ROOT)/include/implot \\
-                              \$(IMGUI_ROOT)/include/imnodes
-
+                              \${JAVA_HOME}/include \\
+                              \${JAVA_HOME}/include/linux \\
+                              \${IMGUI_ROOT}/include \\
+                              \${IMGUI_ROOT}/include/imgui \\
+                              \${IMGUI_ROOT}/include/implot \\
+                              \${IMGUI_ROOT}/include/imnodes
+          
           LOCAL_SRC_FILES := \$(wildcard \$(LOCAL_PATH)/*.cpp)
           
-          LOCAL_SRC_FILES += \$(wildcard \$(IMGUI_ROOT)/include/imgui/*.cpp)
-          LOCAL_SRC_FILES += \$(wildcard \$(IMGUI_ROOT)/include/implot/*.cpp)
-          LOCAL_SRC_FILES += \$(wildcard \$(IMGUI_ROOT)/include/imnodes/*.cpp)
+          LOCAL_SRC_FILES += \$(wildcard \${IMGUI_ROOT}/include/imgui/*.cpp)
+          LOCAL_SRC_FILES += \$(wildcard \${IMGUI_ROOT}/include/implot/*.cpp)
+          LOCAL_SRC_FILES += \$(wildcard \${IMGUI_ROOT}/include/imnodes/*.cpp)
 
           LOCAL_LDLIBS := -llog -landroid
           include \$(BUILD_SHARED_LIBRARY)
           EOF
-
+          
           $ANDROID_NDK_HOME/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk NDK_APPLICATION_MK=Application.mk
-
+          
           ROOT_DIR="/home/runner/work/sable_android/sable_android"
           mkdir -p "$ROOT_DIR/imgui-native-android"
           
           if [ -f "libs/arm64-v8a/libimgui-java64.so" ]; then
             cp libs/arm64-v8a/libimgui-java64.so "$ROOT_DIR/imgui-native-android/"
-            echo "found libimgui-java64.so"
+            echo "SUCCESFUL, found imgui binary"
           else
-            echo "imgui not found"
+            echo "imgui binary not found"
             find . -name "*.so"
             exit 1
           fi
