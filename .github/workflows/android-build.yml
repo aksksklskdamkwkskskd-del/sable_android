@@ -65,8 +65,9 @@ jobs:
 
       - name: build imgui-java natives
         run: |
-          git clone --depth 1 https://github.com/SpaiR/imgui-java.git
+          git clone https://github.com/SpaiR/imgui-java.git
           cd imgui-java
+          git submodule update --init --recursive
           chmod +x ./gradlew
           
           ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
@@ -83,10 +84,6 @@ jobs:
           
           IMGUI_ROOT_PATH=$(pwd | sed 's|/imgui-binding.*||')
           echo "IMGUI_ROOT_PATH is: $IMGUI_ROOT_PATH"
-          
-          echo "--- PATHS ---"
-          ls -la "$IMGUI_ROOT_PATH/include/imgui" || echo "IMGUI DIR MISSING"
-          ls -la "${JAVA_HOME}/include" || echo "JAVA INCLUDE MISSING"
           
           cat <<EOF > Application.mk
           APP_ABI := arm64-v8a
@@ -128,12 +125,8 @@ jobs:
           include \$(BUILD_SHARED_LIBRARY)
           EOF
           
-          echo "--- ANDROID.MK ---"
-          cat Android.mk
-          
           $ANDROID_NDK_HOME/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk NDK_APPLICATION_MK=Application.mk || {
             echo "--- NDK BUILD FAILED ---"
-            tree "$IMGUI_ROOT_PATH/include"
             exit 1
           }
           
@@ -145,7 +138,6 @@ jobs:
             echo "SUCCESFUL, found imgui binary"
           else
             echo "imgui binary not found"
-            find . -name "*.so"
             exit 1
           fi
           
