@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       loader:
+        description: 'Target Modloader'
         required: true
         default: 'neoforge'
         type: choice
@@ -11,199 +12,209 @@ on:
           - neoforge
           - fabric
       build_ref:
+        description: 'Tag or Branch to build'
         required: true
         default: 'main'
-
+        
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.inputs.build_ref }}-${{ github.event.inputs.loader }}
   cancel-in-progress: true
-
-permissions:
-  contents: write
-  actions: write
 
 jobs:
   build-sable:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: checkout sources
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.build_ref }}
           fetch-depth: 0
 
-      - name: setting version variables
+      - name: set loader environment
         run: |
           echo "LOADER=${{ github.event.inputs.loader }}" >> $GITHUB_ENV
           echo "VERSION_NAME=${{ github.event.inputs.build_ref }}" >> $GITHUB_ENV
 
-      - name: setup java
+      - name: setup java 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: 21
           cache: gradle
 
-      - name: setup rust
+      - name: setup rust for aarch64
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-01-29
           targets: aarch64-linux-android
           components: rust-src
 
-      - name: setup paths and environment
-        run: |
-          echo "y" | sudo ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.2.9519653"
-          NDK_PATH="${ANDROID_SDK_ROOT}/ndk/25.2.9519653"
-          echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
-          
-          TOOLCHAIN="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          CLANG="$TOOLCHAIN/aarch64-linux-android24-clang"
-          
-          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CLANG" >> $GITHUB_ENV
-          echo "CC_aarch64_linux_android=$CLANG" >> $GITHUB_ENV
-          echo "AR_aarch64_linux_android=$TOOLCHAIN/llvm-ar" >> $GITHUB_ENV
+      - name: install rust-src
+        run: rustup component add rust-src
 
-      - name: build imgui-java natives
+      - name: configure cargo to use android ndk (ai help)
         run: |
-          git clone https://github.com/SpaiR/imgui-java.git
-          cd imgui-java
-          git submodule update --init --recursive
-          chmod +x ./gradlew
-          
-          ./gradlew :imgui-binding:generateLibs -Denvs=android -Dlocal -Dtarget=all -PandroidNdkPath=$ANDROID_NDK_HOME -PandroidAbi=arm64-v8a
-          
-          JNI_SRC_DIR=$(find $(pwd) -name "jni_common.cpp" -print -quit | xargs dirname)
-          
-          if [ -z "$JNI_SRC_DIR" ]; then
-            echo "JNI not found"
-            exit 1
+          NDK_PATH="$ANDROID_SDK_ROOT/ndk-bundle"
+          if [ ! -d "$NDK_PATH" ]; then
+            NDK_PATH=$(find $ANDROID_SDK_ROOT/ndk -maxdepth 1 -type d | sort -r | head -n 1)
           fi
           
-          echo "found JNI at: $JNI_SRC_DIR"
-          cd "$JNI_SRC_DIR"
-          
-          IMGUI_ROOT_PATH=$(pwd | sed 's|/imgui-binding.*||')
-          echo "IMGUI_ROOT_PATH is: $IMGUI_ROOT_PATH"
-          
-          cat <<EOF > Application.mk
-          APP_ABI := arm64-v8a
-          APP_PLATFORM := android-24
-          APP_STL := c++_static
-          APP_CPPFLAGS := -frtti -fexceptions -std=c++17 -DIMGUI_DEFINE_MATH_OPERATORS
+          mkdir -p common/src/main/rust/rapier/.cargo
+          cat <<EOF > common/src/main/rust/rapier/.cargo/config.toml
+          [target.aarch64-linux-android]
+          linker = "$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
+          rustflags = ["-C", "link-arg=-fuse-ld=lld"]
           EOF
-
-          cat <<EOF > Android.mk
-          LOCAL_PATH := \$(call my-dir)
-          include \$(CLEAR_VARS)
-
-          LOCAL_MODULE := imgui-java64
-          
-          LOCAL_C_INCLUDES := \$(LOCAL_PATH)
-          LOCAL_C_INCLUDES += ${JAVA_HOME}/include
-          LOCAL_C_INCLUDES += ${JAVA_HOME}/include/linux
-          LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include
-          LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include/imgui
-          LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include/implot
-          LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include/imnodes
-          LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include/ImGuiColorTextEdit
-          LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include/imgui-knobs
-          LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include/imgui-node-editor
-          LOCAL_C_INCLUDES += ${IMGUI_ROOT_PATH}/include/imguizmo
-                    
-          LOCAL_SRC_FILES := \$(wildcard \$(LOCAL_PATH)/*.cpp)
-          LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/imgui/*.cpp) \$(wildcard ${IMGUI_ROOT_PATH}/include/imgui/*.c)
-          LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/implot/*.cpp)
-          LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/imnodes/*.cpp)
-          LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/ImGuiColorTextEdit/*.cpp)
-          LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/imgui-knobs/*.cpp)
-          LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/imgui-node-editor/*.cpp)
-          LOCAL_SRC_FILES += \$(wildcard ${IMGUI_ROOT_PATH}/include/imguizmo/*.cpp)
-
-          LOCAL_LDLIBS := -llog -landroid
-          include \$(BUILD_SHARED_LIBRARY)
-          EOF
-          
-          $ANDROID_NDK_HOME/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk NDK_APPLICATION_MK=Application.mk || {
-            echo "--- NDK BUILD FAILED ---"
-            exit 1
-          }
-          
-          ROOT_DIR="/home/runner/work/sable_android/sable_android"
-          mkdir -p "$ROOT_DIR/imgui-native-android"
-          
-          if [ -f "libs/arm64-v8a/libimgui-java64.so" ]; then
-            cp libs/arm64-v8a/libimgui-java64.so "$ROOT_DIR/imgui-native-android/"
-            echo "SUCCESFUL, found imgui binary"
-          else
-            echo "imgui binary not found"
-            exit 1
-          fi
-          
-      - name: build rapier (with marten) hope.so
+ 
+      - name: build sable/rapier
+        working-directory: common/src/main/rust/rapier
         run: |
-          cd common/src/main/rust/rapier
-          
-          TOOLCHAIN="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          export PATH="$TOOLCHAIN:$PATH"
-          
+          export RUSTC_BOOTSTRAP=1 # nightly required
           cargo build --release --target aarch64-linux-android
           
-          DEST_DIR="$GITHUB_WORKSPACE/imgui-native-android"
-          mkdir -p "$DEST_DIR"
-          
-          RESULT_SO="../target/aarch64-linux-android/release/libsable_rapier.so"
-          
-          cp "$RESULT_SO" "$DEST_DIR/libsable_rapier.so"
-          cp "$RESULT_SO" "$DEST_DIR/sable_rapier_aarch64_linux.so"
-        env:
-          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: aarch64-linux-android24-clang
-          
-      - name: build mod
+      - name: build the mod
         run: |
           chmod +x ./gradlew
-          ./gradlew :${{ env.LOADER }}:assemble -x common:buildRustNatives
+          ./gradlew :${{ env.LOADER }}:build -x common:buildRustNatives
+
+      - name: inject lib into jar
+        run: |
+          SO_FILE=$(find . -name "libsable_rapier.so" | grep "release" | grep "aarch64-linux-android" | head -n 1)
+          JAR_FILE=$(find ${{ env.LOADER }}/build/libs/ -name "sable-${{ env.LOADER }}-*.jar" | grep -v "sources" | head -n 1)
+          echo "native: $SO_FILE"
+          echo "jar file: $JAR_FILE"
+          
+          mkdir -p natives/sable_rapier
+          cp $SO_FILE natives/sable_rapier/sable_rapier_aarch64_linux.so
+          
+          zip -u "$JAR_FILE" natives/sable_rapier/sable_rapier_aarch64_linux.so
+          
+          mkdir -p out
+          cp $JAR_FILE out/sable-android.jar
+
+      - name: upload sable
+        uses: actions/upload-artifact@v4
+        with:
+          name: sable-artifact-${{ env.LOADER }}
+          path: out/sable-android.jar
+        
+  build-imgui:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout imgui-java repo
+        uses: actions/checkout@v4
+        with:
+          repository: SpaiR/imgui-java
+          ref: v1.86.1
+          submodules: recursive
+
+      - name: setup java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: compile libimgui-java64.so
+        run: |
+          mkdir -p imgui-binding/build/jni
+          cp imgui-binding/src/main/native/* imgui-binding/build/jni/
+          
+          cp include/imgui/*.cpp imgui-binding/build/jni/
+          cp include/imgui/*.h imgui-binding/build/jni/
+          
+          cp include/implot/*.cpp imgui-binding/build/jni/
+          cp include/implot/*.h imgui-binding/build/jni/
+          
+          cp include/imnodes/*.cpp imgui-binding/build/jni/
+          cp include/imnodes/*.h imgui-binding/build/jni/
+
+          cp include/ImGuiColorTextEdit/*.cpp imgui-binding/build/jni/
+          cp include/ImGuiColorTextEdit/*.h imgui-binding/build/jni/
+          
+          echo "--- files ---"
+          ls imgui-binding/build/jni/
+          
+          NDK_PATH="$ANDROID_SDK_ROOT/ndk-bundle"
+          if [ ! -d "$NDK_PATH" ]; then NDK_PATH=$(find $ANDROID_SDK_ROOT/ndk -maxdepth 1 -type d | sort -r | head -n 1); fi
+          CLANG_CXX="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++"
+          JAVA_INCLUDES="-I$JAVA_HOME/include -I$JAVA_HOME/include/linux"
+          CXXFLAGS="-shared -fPIC -O3 -std=c++11 $JAVA_INCLUDES -I. -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -w -fno-stack-protector"
+          
+          echo "--- build starting---"
+          
+          cd imgui-binding/build/jni
+          
+          $CLANG_CXX $CXXFLAGS *.cpp -o libimgui-java64.so -lm -llog -landroid
+          
+          if [ -f "libimgui-java64.so" ]; then
+            echo "--- SUCCESSFUL ---"
+          else
+            echo "--- ERROR ---"
+            exit 1
+          fi
+          
+          mkdir -p ../../../out
+          cp libimgui-java64.so ../../../out/
+
+      - name: upload imgui
+        uses: actions/upload-artifact@v4
+        with:
+          name: imgui-artifact
+          path: out/libimgui-java64.so
+          
+  ### MERGE BOTH ###
+  
+  merge-all:
+    needs: [build-sable, build-imgui]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: get sable
+        uses: actions/download-artifact@v4
+        with:
+          name: sable-artifact-${{ github.event.inputs.loader }}
+          path: sable-dir
+
+      - name: get imgui
+        uses: actions/download-artifact@v4
+        with:
+          name: imgui-artifact
+          path: imgui-dir
 
       - name: perform jar-jar
         run: |
           mkdir -p final
-          SABLE_JAR=$(find ${{ env.LOADER }}/build/libs -name "sable-*.jar" ! -name "*-sources.jar" | head -n 1)
-          FINAL_NAME="sable-ANDROID-${{ github.event.inputs.build_ref }}.jar"
-          cp "$SABLE_JAR" "final/$FINAL_NAME"
           
-          mkdir -p final/natives/sable_rapier
+          SABLE_FILE="sable-dir/sable-android.jar"
+          VER="${{ github.event.inputs.build_ref }}"
+          LOADER="${{ github.event.inputs.loader }}"
+          FINAL_NAME="sable-ANDROID-${VER}.jar"
           
-          cp "$GITHUB_WORKSPACE/imgui-native-android/sable_rapier_aarch64_linux.so" final/natives/sable_rapier/
+          cp "$SABLE_FILE" "final/$FINAL_NAME"
           
           cd final
-          zip -u "$FINAL_NAME" natives/sable_rapier/sable_rapier_aarch64_linux.so
+          unzip "$FINAL_NAME" "*/veil-*.jar" "META-INF/*/veil-*.jar" || true
+          VEIL_PATH=$(find . -name "veil-*.jar" | head -n 1)
           
-          VEIL_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep "veil-.*\.jar" | awk '{print $4}' | head -n 1 | tr -d '\r')
-          unzip "$FINAL_NAME" "$VEIL_INTERNAL_PATH" -d .
-          mkdir -p veil_patch
-          unzip "$VEIL_INTERNAL_PATH" -d veil_patch/
+          mkdir -p veil_internals
+          unzip "$VEIL_PATH" -d veil_internals/
           
-          TARGET_DIR_1="veil_patch/io/imgui/java/native-bin/linux-aarch64"
-          TARGET_DIR_2="veil_patch/natives/linux-aarch64"
+          TARGET_DIR="veil_internals/io/imgui/java/native-bin"
+          mkdir -p "$TARGET_DIR"
+          cp ../imgui-dir/libimgui-java64.so "$TARGET_DIR/libimgui-java64.so"
           
-          mkdir -p "$TARGET_DIR_1"
-          mkdir -p "$TARGET_DIR_2"
-          
-          cp "$GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so" "$TARGET_DIR_1/libimgui-java64.so"
-          cp "$GITHUB_WORKSPACE/imgui-native-android/libimgui-java64.so" "$TARGET_DIR_2/libimgui-java64.so"
-          
-          cp "$GITHUB_WORKSPACE/imgui-native-android/sable_rapier_aarch64_linux.so" "$TARGET_DIR_1/sable_rapier_aarch64_linux.so"
-          cp "$GITHUB_WORKSPACE/imgui-native-android/sable_rapier_aarch64_linux.so" "$TARGET_DIR_2/sable_rapier_aarch64_linux.so"
-          
-          cd veil_patch
-          zip -r ../patched_veil.jar .
+          cd veil_internals
+          zip -r ../updated_veil.jar .
           cd ..
           
-          mv patched_veil.jar "$VEIL_INTERNAL_PATH"
-          zip -d "$FINAL_NAME" "META-INF/*.SF" "META-INF/*.RSA" "META-INF/*.DSA" || true
+          VEIL_INTERNAL_PATH=$(find . -type f -name "veil-*.jar" | head -n 1 | sed 's|^\./||')
+          mv updated_veil.jar "$VEIL_INTERNAL_PATH"
           zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
           
           echo "ASSET_PATH=final/$FINAL_NAME" >> $GITHUB_ENV
-          
+          echo "FINAL_NAME=$FINAL_NAME" >> $GITHUB_ENV
+
       - name: release
         uses: softprops/action-gh-release@v2
         with:
