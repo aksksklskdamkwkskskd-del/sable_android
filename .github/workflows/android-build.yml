@@ -139,15 +139,18 @@ jobs:
             exit 1
           fi
           
-      - name: build rapier (rust natives)
+      - name: build rapier (with marten)
         run: |
+          cd common/src/main/rust
+          
+          printf '\n[lib]\nname = "sable_rapier"\ncrate-type = ["cdylib"]\n' >> Cargo.toml
+          
           cargo build --release --target aarch64-linux-android
           
-          mkdir -p $GITHUB_WORKSPACE/rapier-native-android
-          
-          RAPIER_SO=$(find target/aarch64-linux-android/release -name "*.so" | head -n 1)
-          cp "$RAPIER_SO" $GITHUB_WORKSPACE/rapier-native-android/sable_rapier_aarch64_linux.so
-          echo "SUCCESS, rapier ok"
+          mkdir -p ../../../../imgui-native-android/
+          cp target/aarch64-linux-android/release/libsable_rapier.so ../../../../imgui-native-android/
+        env:
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: aarch64-linux-android24-clang
 
       - name: build mod
         run: |
