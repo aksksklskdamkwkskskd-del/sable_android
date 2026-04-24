@@ -143,15 +143,17 @@ jobs:
         run: |
           cd common/src/main/rust
           
+          cd marten
+          
           printf '\n[lib]\nname = "sable_rapier"\ncrate-type = ["cdylib"]\n' >> Cargo.toml
           
           cargo build --release --target aarch64-linux-android
           
-          mkdir -p ../../../../imgui-native-android/
-          cp target/aarch64-linux-android/release/libsable_rapier.so ../../../../imgui-native-android/
+          mkdir -p ../../../../../imgui-native-android/
+          cp target/aarch64-linux-android/release/libsable_rapier.so ../../../../../imgui-native-android/
         env:
           CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: aarch64-linux-android24-clang
-
+          
       - name: build mod
         run: |
           chmod +x ./gradlew
