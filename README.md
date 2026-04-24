@@ -10,10 +10,12 @@
 </div>
 </h1>
 
-# IMPORTANT
+# IMPORTANT (Updates about builds)
 > [!IMPORTANT]
-> Builds are broken and being tested at the moment.
-> Please wait for new fixed releases.
+> ~Builds are broken and being tested at the moment.
+> Please wait for new fixed releases.~
+> Now using already existing methods to generate builds. Which is very likely to be unstable (general) and incompatible on newer versions (at least above 1.0.6+)
+> Still working on them when I have time to look into. Please be patient, I'm an amateur. :)
 
 # What
 
