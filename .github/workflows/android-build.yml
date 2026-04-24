@@ -139,11 +139,11 @@ jobs:
             exit 1
           fi
           
-      - name: build rapier (with marten)
+      - name: build rapier (The True Approach)
         run: |
           cd common/src/main/rust/rapier
           
-          printf '\n[lib]\nname = "sable_rapier"\ncrate-type = ["cdylib"]\n' >> Cargo.toml
+          sed -i '/\[lib\]/a name = "sable_rapier"\ncrate-type = ["cdylib"]' Cargo.toml
           
           cargo build --release --target aarch64-linux-android
           
