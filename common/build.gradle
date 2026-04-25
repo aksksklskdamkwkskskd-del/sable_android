@@ -126,7 +126,7 @@ supportedTargets.forEach { target ->
         group = 'rust'
         workingDir rustProjectDir
         description = "Cross-compiles natives for the ${target.triple} target"
-        commandLine = commandLineForTarget(target, '--release')
+        commandLine = commandLineForTarget(target)
         commandLine.add('--release')
     }
 }
@@ -194,10 +194,10 @@ tasks.register('packRustNatives', Tar) {
         from(file("${nativesDir}/${f}")) { eachFile { setPath f } }
     }
     doLast {
-        byte[] bytes = Files.readAllBytes(getArchiveFile().get().asFile.toPath());
+        byte[] bytes = Files.readAllBytes(getArchiveFile().get().asFile.toPath())
         try (var f = new FileOutputStream(getArchiveFile().get().asFile)) {
             try (var x = new XZOutputStream(f, new LZMA2Options(LZMA2Options.PRESET_MAX))) {
-                x.write(bytes);
+                x.write(bytes)
             }
         }
         supportedTargets.forEach { t ->
