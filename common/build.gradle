@@ -126,8 +126,9 @@ supportedTargets.forEach { target ->
         group = 'rust'
         workingDir rustProjectDir
         description = "Cross-compiles natives for the ${target.triple} target"
-        commandLine = commandLineForTarget(target)
-        commandLine.add('--release')
+        def commands= commandLineForTarget(target)
+        commands.add('--release')
+        commandLine = commands
     }
 }
 
@@ -170,7 +171,7 @@ tasks.register('copyRustNatives', Copy) {
 tasks.register('copyRustNativesDev', Copy) {
     group = 'rust'
     into nativesDir
-    mustRunAfter(buildRustNatives)
+    mustRunAfter(buildRustNativesDev)
 
     supportedTargets.forEach { target ->
         var library = file("$rustRootDir/target/debug/${if (target.lib) { "lib" } else { "" }}sable_rapier.${target.ext}")
@@ -249,6 +250,7 @@ dependencies {
     implementation("foundry.veil:veil-common-${project.minecraft_version}:${project.veil_version}") {
         exclude group: "maven.modrinth"
     }
+    compileOnly("foundry.imguimc:imguimc-common-${project.minecraft_version}:${project.imguimc_version}")
 
     compileOnly("fuzs.forgeconfigapiport:forgeconfigapiport-fabric:${forgeconfigapiport_version}") {
         transitive = false
