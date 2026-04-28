@@ -30,197 +30,84 @@ jobs:
           ref: ${{ github.event.inputs.build_ref }}
           fetch-depth: 0
 
-      - name: set loader environment
+      - name: source patching
         run: |
-          echo "LOADER=${{ github.event.inputs.loader }}" >> $GITHUB_ENV
-          echo "VERSION_NAME=${{ github.event.inputs.build_ref }}" >> $GITHUB_ENV
+          RAPIER_FILE=$(find . -name "Rapier3D.java")
+          if [ -f "$RAPIER_FILE" ]; then
+            sed -i 's|private static final String NATIVE_DIR = ".sable/natives";|private static final String NATIVE_DIR = System.getProperty("java.io.tmpdir") + "/.sable/natives";|g' "$RAPIER_FILE"
+            echo "patched $RAPIER_FILE"
+          else
+            echo "Rapier3D.java not found"
+          fi
 
-      - name: setup java 21
+      - name: setup java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: 21
           cache: gradle
 
-      - name: setup rust for aarch64
+      - name: setup rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-01-29
           targets: aarch64-linux-android
-          components: rust-src
 
-      - name: install rust-src
-        run: rustup component add rust-src
+      - name: setup Android NDK
+        uses: nndixon/setup-android-ndk@v1
+        with:
+          ndk-version: r27b
+          add-to-path: true
 
-      - name: configure cargo to use android ndk (ai help)
+      - name: build rust natives (rapier)
         run: |
-          NDK_PATH="$ANDROID_SDK_ROOT/ndk-bundle"
-          if [ ! -d "$NDK_PATH" ]; then
-            NDK_PATH=$(find $ANDROID_SDK_ROOT/ndk -maxdepth 1 -type d | sort -r | head -n 1)
-          fi
-          
-          mkdir -p common/src/main/rust/rapier/.cargo
-          cat <<EOF > common/src/main/rust/rapier/.cargo/config.toml
-          [target.aarch64-linux-android]
-          linker = "$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
-          rustflags = ["-C", "link-arg=-fuse-ld=lld"]
-          EOF
- 
-      - name: build sable/rapier
-        working-directory: common/src/main/rust/rapier
-        run: |
-          export RUSTC_BOOTSTRAP=1 # nightly required
+          cd common/src/main/resources
           cargo build --release --target aarch64-linux-android
-          
-      - name: build the mod
+
+      - name: mod building
         run: |
           chmod +x ./gradlew
-          ./gradlew :${{ env.LOADER }}:build -x common:buildRustNatives
+          ./gradlew :${{ github.event.inputs.loader }}:build -x test
 
-      - name: inject lib into jar
+      - name: build imgui (Android)
         run: |
-          SO_FILE=$(find . -name "libsable_rapier.so" | grep "release" | grep "aarch64-linux-android" | head -n 1)
-          JAR_FILE=$(find ${{ env.LOADER }}/build/libs/ -name "sable-${{ env.LOADER }}-*.jar" | grep -v "sources" | head -n 1)
-          echo "native: $SO_FILE"
-          echo "jar file: $JAR_FILE"
+          mkdir -p imgui-build
+          JNI_INCLUDE="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include"
           
+          arm64-v8a-linux-android34-clang++ -shared -fPIC \
+            -I$JNI_INCLUDE -I$JNI_INCLUDE/aarch64-linux-android \
+            $(find . -name "*.cpp" | grep "imgui") \
+            -o imgui-build/libimgui-java64.so -landroid -llog
+
+      - name: injections
+        run: |
+          SABLE_JAR=$(find ${{ github.event.inputs.loader }}/build/libs/ -name "*.jar" ! -name "*-sources.jar" ! -name "*-dev.jar" | head -n 1)
+          VER=$(echo ${{ github.event.inputs.build_ref }} | sed 's/refs\/tags\///')
+          FINAL_NAME="sable-android-${{ github.event.inputs.loader }}-${VER}.jar"
+          cp "$SABLE_JAR" "$FINAL_NAME"
+          
+          VEIL_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep -o "META-INF/jarjar/veil-.*\.jar" | head -n 1)
+          unzip "$FINAL_NAME" "$VEIL_INTERNAL_PATH" -d .
+          
+          mkdir -p io/imgui/java/native-bin
+          cp imgui-build/libimgui-java64.so io/imgui/java/native-bin/
+          zip -u "$VEIL_INTERNAL_PATH" io/imgui/java/native-bin/libimgui-java64.so
+          
+          RAPIER_SO=$(find target/aarch64-linux-android/release/ -name "libsable_rapier.so" | head -n 1)
           mkdir -p natives/sable_rapier
-          cp $SO_FILE natives/sable_rapier/sable_rapier_aarch64_linux.so
+          cp "$RAPIER_SO" natives/sable_rapier/sable_rapier_aarch64_linux.so
           
-          zip -u "$JAR_FILE" natives/sable_rapier/sable_rapier_aarch64_linux.so
-          
-          mkdir -p out
-          cp $JAR_FILE out/sable-android.jar
-
-      - name: upload sable
-        uses: actions/upload-artifact@v4
-        with:
-          name: sable-artifact-${{ env.LOADER }}
-          path: out/sable-android.jar
-        
-  build-imgui:
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout imgui-java repo
-        uses: actions/checkout@v4
-        with:
-          repository: SpaiR/imgui-java
-          ref: v1.86.1
-          submodules: recursive
-
-      - name: setup java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: 17
-
-      - name: compile libimgui-java64.so
-        run: |
-          mkdir -p imgui-binding/build/jni
-          cp imgui-binding/src/main/native/* imgui-binding/build/jni/
-          
-          cp include/imgui/*.cpp imgui-binding/build/jni/
-          cp include/imgui/*.h imgui-binding/build/jni/
-          
-          cp include/implot/*.cpp imgui-binding/build/jni/
-          cp include/implot/*.h imgui-binding/build/jni/
-          
-          cp include/imnodes/*.cpp imgui-binding/build/jni/
-          cp include/imnodes/*.h imgui-binding/build/jni/
-
-          cp include/ImGuiColorTextEdit/*.cpp imgui-binding/build/jni/
-          cp include/ImGuiColorTextEdit/*.h imgui-binding/build/jni/
-          
-          echo "--- files ---"
-          ls imgui-binding/build/jni/
-          
-          NDK_PATH="$ANDROID_SDK_ROOT/ndk-bundle"
-          if [ ! -d "$NDK_PATH" ]; then NDK_PATH=$(find $ANDROID_SDK_ROOT/ndk -maxdepth 1 -type d | sort -r | head -n 1); fi
-          CLANG_CXX="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++"
-          JAVA_INCLUDES="-I$JAVA_HOME/include -I$JAVA_HOME/include/linux"
-          CXXFLAGS="-shared -fPIC -O3 -std=c++11 $JAVA_INCLUDES -I. -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -w -fno-stack-protector"
-          
-          echo "--- build starting---"
-          
-          cd imgui-binding/build/jni
-          
-          $CLANG_CXX $CXXFLAGS *.cpp -o libimgui-java64.so -lm -llog -landroid
-          
-          if [ -f "libimgui-java64.so" ]; then
-            echo "--- SUCCESSFUL ---"
-          else
-            echo "--- ERROR ---"
-            exit 1
-          fi
-          
-          mkdir -p ../../../out
-          cp libimgui-java64.so ../../../out/
-
-      - name: upload imgui
-        uses: actions/upload-artifact@v4
-        with:
-          name: imgui-artifact
-          path: out/libimgui-java64.so
-          
-  ### MERGE BOTH ###
-  
-  merge-all:
-    needs: [build-sable, build-imgui]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: get sable
-        uses: actions/download-artifact@v4
-        with:
-          name: sable-artifact-${{ github.event.inputs.loader }}
-          path: sable-dir
-
-      - name: get imgui
-        uses: actions/download-artifact@v4
-        with:
-          name: imgui-artifact
-          path: imgui-dir
-
-      - name: perform jar-jar
-        run: |
-          mkdir -p final
-          
-          SABLE_FILE="sable-dir/sable-android.jar"
-          VER="${{ github.event.inputs.build_ref }}"
-          LOADER="${{ github.event.inputs.loader }}"
-          FINAL_NAME="sable-ANDROID-${VER}.jar"
-          
-          cp "$SABLE_FILE" "final/$FINAL_NAME"
-          
-          cd final
-          unzip "$FINAL_NAME" "*/veil-*.jar" "META-INF/*/veil-*.jar" || true
-          VEIL_PATH=$(find . -name "veil-*.jar" | head -n 1)
-          
-          mkdir -p veil_internals
-          unzip "$VEIL_PATH" -d veil_internals/
-          
-          TARGET_DIR="veil_internals/io/imgui/java/native-bin"
-          mkdir -p "$TARGET_DIR"
-          cp ../imgui-dir/libimgui-java64.so "$TARGET_DIR/libimgui-java64.so"
-          
-          cd veil_internals
-          zip -r ../updated_veil.jar .
-          cd ..
-          
-          VEIL_INTERNAL_PATH=$(find . -type f -name "veil-*.jar" | head -n 1 | sed 's|^\./||')
-          mv updated_veil.jar "$VEIL_INTERNAL_PATH"
           zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
-          
-          echo "ASSET_PATH=final/$FINAL_NAME" >> $GITHUB_ENV
-          echo "FINAL_NAME=$FINAL_NAME" >> $GITHUB_ENV
+          zip -u "$FINAL_NAME" natives/sable_rapier/sable_rapier_aarch64_linux.so
+
+          echo "ASSET_PATH=$FINAL_NAME" >> $GITHUB_ENV
 
       - name: release
         uses: softprops/action-gh-release@v2
         with:
-          files: "${{ env.ASSET_PATH }}"
-          tag_name: "${{ github.event.inputs.build_ref }}"
-          name: "Sable Android ${{ github.event.inputs.build_ref }}"
-          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V1.1\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
+          files: ${{ env.ASSET_PATH }}
+          tag_name: ${{ github.event.inputs.build_ref }}
+          name: "Sable Android Port - ${{ github.event.inputs.build_ref }}"
+          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V3.0-PRE-TESTING (Active build tests not full release)\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
