@@ -93,6 +93,14 @@ jobs:
       - name: build rust natives
         run: |
           cd common/src/main/rust
+          TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+          mkdir -p .cargo
+          
+          cat <<EOF > .cargo/config.toml
+          [target.aarch64-linux-android]
+          linker = "$TOOLCHAIN/bin/aarch64-linux-android34-clang"
+          EOF
+          
           export RUSTFLAGS="-C link-arg=-L$(pwd)/target/aarch64-linux-android/release"
           cargo build --release --target aarch64-linux-android
           
@@ -136,6 +144,6 @@ jobs:
           files: ${{ env.ASSET_PATH }}
           tag_name: ${{ github.event.inputs.build_ref }}
           name: "Sable Android ${{ github.event.inputs.build_ref }}"
-          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V3.0.2-PRE-TESTING (Active build tests not full release)\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
+          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V3.0.3-PRE-TESTING (Active build tests not full release)\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
