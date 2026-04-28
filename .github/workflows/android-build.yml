@@ -41,17 +41,17 @@ jobs:
       - name: build imgui natives
         run: |
           mkdir -p imgui-build
-          JNI_INCLUDE="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include"
+          TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+          JNI_INCLUDE="$TOOLCHAIN/sysroot/usr/include"
           
-          export PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
-          
-          arm64-v8a-linux-android34-clang++ -shared -fPIC \
+          $TOOLCHAIN/bin/aarch64-linux-android34-clang++ -shared -fPIC \
             -I$JNI_INCLUDE -I$JNI_INCLUDE/aarch64-linux-android \
             $(find . -name "*.cpp" | grep "imgui") \
             -o imgui-build/libimgui-java64.so -landroid -llog
-
+            
       - name: upload imgui artifact
         uses: actions/upload-artifact@v4
+        id: imgui-save
         with:
           name: imgui-native
           path: imgui-build/libimgui-java64.so
