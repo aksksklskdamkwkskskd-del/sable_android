@@ -87,7 +87,7 @@ public class SubLevelStorage implements AutoCloseable {
             final SubLevelRegionFile regionFile = this.getRegionFile(chunkPos);
             return regionFile.read(chunkPos);
         } catch (final IOException e) {
-            Sable.LOGGER.error("Failed to load holding chunk for " + chunkPos, e);
+            Sable.LOGGER.error("Failed to load holding chunk for {}", chunkPos, e);
             return null;
         }
     }
@@ -127,7 +127,7 @@ public class SubLevelStorage implements AutoCloseable {
 
             return subLevel;
         } catch (final IOException e) {
-            Sable.LOGGER.error("Failed to load sub-level for " + chunkPos, e);
+            Sable.LOGGER.error("Failed to load sub-level for {}", chunkPos, e);
             return null;
         }
     }
@@ -160,7 +160,7 @@ public class SubLevelStorage implements AutoCloseable {
                 storageIndex++;
             }
         } catch (final IOException e) {
-            Sable.LOGGER.error("Failed to save sub-level for " + chunkPos, e);
+            Sable.LOGGER.error("Failed to save sub-level for {}", chunkPos, e);
         }
         return null;
     }
@@ -176,7 +176,7 @@ public class SubLevelStorage implements AutoCloseable {
             final SubLevelStorageFile storageFile = this.getRegionStorageFile(pointer.chunkPos(), pointer.storageIndex());
             storageFile.write(pointer.subLevelIndex(), subLevel != null ? subLevel.fullTag() : null);
         } catch (final IOException e) {
-            Sable.LOGGER.error("Failed to save sub-level for " + pointer.chunkPos(), e);
+            Sable.LOGGER.error("Failed to save sub-level for {}", pointer.chunkPos(), e);
         }
     }
 
@@ -224,7 +224,7 @@ public class SubLevelStorage implements AutoCloseable {
 
     @Override
     public void close() throws IOException {
-        final ExceptionCollector<IOException> exceptionCollector = new ExceptionCollector();
+        final ExceptionCollector<IOException> exceptionCollector = new ExceptionCollector<>();
 
         for (final SubLevelStorageFile storageFile : this.storageCache.values()) {
             try {

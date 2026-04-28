@@ -1,8 +1,6 @@
 package dev.ryanhcode.sable.sublevel.tracking_points;
 
 import dev.ryanhcode.sable.Sable;
-import dev.ryanhcode.sable.api.SubLevelHelper;
-import dev.ryanhcode.sable.api.entity.EntitySubLevelUtil;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.SubLevelObserver;
@@ -26,6 +24,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
@@ -43,17 +42,13 @@ public class SubLevelTrackingPointSavedData extends SavedData implements SubLeve
     }
 
     public static SubLevelTrackingPointSavedData getOrLoad(final ServerLevel level) {
-        final SubLevelTrackingPointSavedData data = level.getDataStorage().computeIfAbsent(
+        return level.getDataStorage().computeIfAbsent(
                 new Factory<>(
-                        () -> {
-                            return new SubLevelTrackingPointSavedData(level);
-                        },
+                        () -> new SubLevelTrackingPointSavedData(level),
                         (tag, provider) -> SubLevelTrackingPointSavedData.load(level, tag),
                         null
                 ),
                 SubLevelTrackingPointSavedData.FILE_ID);
-
-        return data;
     }
 
     private static SubLevelTrackingPointSavedData load(final ServerLevel level, final CompoundTag tag) {
@@ -91,7 +86,7 @@ public class SubLevelTrackingPointSavedData extends SavedData implements SubLeve
     }
 
     @Override
-    public CompoundTag save(final CompoundTag compoundTag, final HolderLookup.Provider provider) {
+    public @NotNull CompoundTag save(final @NotNull CompoundTag compoundTag, final HolderLookup.@NotNull Provider provider) {
         final SubLevelContainer container = SubLevelContainer.getContainer(this.level);
         assert container != null : "Sub-level container is null";
 
@@ -259,7 +254,6 @@ public class SubLevelTrackingPointSavedData extends SavedData implements SubLeve
 
     @Nullable
     public TrackingPoint getTrackingPoint(final UUID uuid) {
-        final TrackingPoint point = this.trackingPoints.get(uuid);
-        return point;
+        return this.trackingPoints.get(uuid);
     }
 }

@@ -133,15 +133,13 @@ public class SubLevelStorageFile implements AutoCloseable {
         return this.externalFileDir.resolve(string);
     }
 
-    @Nullable
     private InputStream createExternalSubLevelInputStream(final int index) throws IOException {
         final Path path = this.getExternalFilePath(index);
-        if (!Files.isRegularFile(path)) {
-            Sable.LOGGER.error("External sub-level path {} is not file", path);
-            return null;
-        } else {
+        if (Files.isRegularFile(path)) {
             return Files.newInputStream(path);
         }
+
+        throw new IOException("External sub-level path " + path + " is not file");
     }
 
     @Nullable
@@ -267,25 +265,10 @@ public class SubLevelStorageFile implements AutoCloseable {
 
     private Path writeToExternalFile(final ByteBuffer byteBuffer) throws IOException {
         final Path tempFile = Files.createTempFile(this.externalFileDir, "tmp", null);
-        final FileChannel fileChannel = FileChannel.open(tempFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
 
-        try {
+        try (final FileChannel fileChannel = FileChannel.open(tempFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
             byteBuffer.position(5);
             fileChannel.write(byteBuffer);
-        } catch (final Throwable throwable1) {
-            if (fileChannel != null) {
-                try {
-                    fileChannel.close();
-                } catch (final Throwable throwable) {
-                    throwable1.addSuppressed(throwable);
-                }
-            }
-
-            throw throwable1;
-        }
-
-        if (fileChannel != null) {
-            fileChannel.close();
         }
 
         return tempFile;
@@ -324,29 +307,14 @@ public class SubLevelStorageFile implements AutoCloseable {
     public void write(final int index, @Nullable final CompoundTag compoundTag) throws IOException {
         if (compoundTag == null) {
             this.clear(index);
-        } else {
-            final DataOutputStream dataOutputStream = this.getSubLevelDataOutputStream(index);
+            return;
+        }
 
-            try {
-                if (COMPRESS_DATA) {
-                    NbtIo.writeCompressed(compoundTag, dataOutputStream);
-                } else {
-                    NbtIo.write(compoundTag, dataOutputStream);
-                }
-            } catch (final Throwable exception) {
-                if (dataOutputStream != null) {
-                    try {
-                        dataOutputStream.close();
-                    } catch (final Throwable anotherException) {
-                        exception.addSuppressed(anotherException);
-                    }
-                }
-
-                throw exception;
-            }
-
-            if (dataOutputStream != null) {
-                dataOutputStream.close();
+        try (final DataOutputStream dataOutputStream = this.getSubLevelDataOutputStream(index)) {
+            if (COMPRESS_DATA) {
+                NbtIo.writeCompressed(compoundTag, dataOutputStream);
+            } else {
+                NbtIo.write(compoundTag, dataOutputStream);
             }
         }
     }
@@ -363,25 +331,11 @@ public class SubLevelStorageFile implements AutoCloseable {
             return null;
         }
 
-        try {
+        try (dataInputStream) {
             if (COMPRESS_DATA) {
                 return NbtIo.readCompressed(dataInputStream, NbtAccounter.unlimitedHeap());
             } else {
                 return NbtIo.read(dataInputStream);
-            }
-        } catch (final Throwable exception) {
-            if (dataInputStream != null) {
-                try {
-                    dataInputStream.close();
-                } catch (final Throwable anotherException) {
-                    exception.addSuppressed(anotherException);
-                }
-            }
-
-            throw exception;
-        } finally {
-            if (dataInputStream != null) {
-                dataInputStream.close();
             }
         }
     }
@@ -474,6 +428,7 @@ public class SubLevelStorageFile implements AutoCloseable {
             this.subLevelIndex = subLevelIndex;
         }
 
+        @Override
         public void close() throws IOException {
             final ByteBuffer byteBuffer = ByteBuffer.wrap(this.buf, 0, this.count);
 

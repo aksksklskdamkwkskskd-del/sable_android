@@ -332,8 +332,8 @@ public class SubLevelHoldingChunkMap implements AutoCloseable {
                 final MinecraftServer server = this.level.getServer();
                 if (server instanceof final SableToastableServer toastable) {
                     toastable.sable$reportSubLevelSaveFailure(data);
-                    return null;
                 }
+                return null;
             }
 
             if (VERBOSE) {
@@ -407,7 +407,7 @@ public class SubLevelHoldingChunkMap implements AutoCloseable {
      * @param create   whether to create a new holding chunk if it doesn't exist
      */
     @Contract("_, true -> !null")
-    private SubLevelHoldingChunk getOrLoadHoldingChunk(final ChunkPos chunkPos, final boolean create) {
+    private @Nullable SubLevelHoldingChunk getOrLoadHoldingChunk(final ChunkPos chunkPos, final boolean create) {
         final long longKey = chunkPos.toLong();
         final SubLevelHoldingChunk holdingChunk = this.loadedHoldingChunks.get(longKey);
 
@@ -525,6 +525,7 @@ public class SubLevelHoldingChunkMap implements AutoCloseable {
         if (VERBOSE) {
             Sable.LOGGER.info("Sub-level {} with pointer {} detected unloaded chunk, moving to {}", subLevel, subLevel.getLastSerializationPointer(), pos);
         }
+
         final Collection<ServerSubLevel> chain = SubLevelHelper.getLoadingDependencyChain(subLevel);
         final List<UUID> uuids = chain.stream().map(SubLevel::getUniqueId).toList();
 

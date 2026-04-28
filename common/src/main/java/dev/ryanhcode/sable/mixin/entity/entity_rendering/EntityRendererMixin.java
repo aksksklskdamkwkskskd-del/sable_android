@@ -1,7 +1,7 @@
 package dev.ryanhcode.sable.mixin.entity.entity_rendering;
 
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import dev.ryanhcode.sable.Sable;
-import dev.ryanhcode.sable.api.entity.EntitySubLevelUtil;
 import dev.ryanhcode.sable.companion.math.BoundingBox3d;
 import dev.ryanhcode.sable.companion.math.JOMLConversion;
 import dev.ryanhcode.sable.sublevel.ClientSubLevel;
@@ -35,35 +35,32 @@ public abstract class EntityRendererMixin {
     @Final
     protected EntityRenderDispatcher entityRenderDispatcher;
 
-    /**
-     * @author RyanH
-     * @reason Account for sub-levels with sky lighting
-     */
-    @Overwrite
-    public final int getPackedLightCoords(final Entity arg, final float f) {
+    @ModifyReturnValue(method = "getPackedLightCoords", at = @At("RETURN"))
+    public final int getPackedLightCoords(final int original, final Entity arg, final float f) {
         final Vec3 lightProbeOffset = arg.getLightProbePosition(f).subtract(arg.getEyePosition(f));
         final Vector3d lightProbePosition = JOMLConversion.toJOML(Sable.HELPER.getEyePositionInterpolated(arg, f)).add(lightProbeOffset.x, lightProbeOffset.y, lightProbeOffset.z);
         final BlockPos blockpos = BlockPos.containing(lightProbePosition.x, lightProbePosition.y, lightProbePosition.z);
-        return LightTexture.pack(sable$getSubLevelAccountedBlockLight(arg.level(), LightLayer.BLOCK, blockpos, lightProbePosition), sable$getSubLevelAccountedLight(arg.level(), LightLayer.SKY, blockpos, lightProbePosition));
+        return LightTexture.pack(sable$getSubLevelAccountedBlockLight(original, arg.level(), LightLayer.BLOCK, blockpos, lightProbePosition),
+                sable$getSubLevelAccountedSkyLight(original, arg.level(), LightLayer.SKY, blockpos, lightProbePosition));
     }
 
     @Redirect(method = "getSkyLightLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;getBrightness(Lnet/minecraft/world/level/LightLayer;Lnet/minecraft/core/BlockPos;)I"))
     private int sable$getSkyLightLevel(final Level instance, final LightLayer lightLayer, final BlockPos blockPos) {
-        return sable$getSubLevelAccountedLight(instance, lightLayer, blockPos, JOMLConversion.atCenterOf(blockPos));
+        return sable$getSubLevelAccountedSkyLight(-1, instance, lightLayer, blockPos, JOMLConversion.atCenterOf(blockPos));
     }
 
     @Unique
-    private static int sable$getSubLevelAccountedLight(final Level instance, final LightLayer lightLayer, final BlockPos blockPos, final Vector3dc probePosition) {
+    private static int sable$getSubLevelAccountedSkyLight(final int original, final Level instance, final LightLayer lightLayer, final BlockPos blockPos, final Vector3dc probePosition) {
         final Iterable<SubLevel> all = Sable.HELPER.getAllIntersecting(instance, new BoundingBox3d(blockPos));
 
-        int baseBrightness = instance.getBrightness(lightLayer, blockPos);
+        int baseBrightness = original == -1 ? instance.getBrightness(lightLayer, blockPos) : LightTexture.sky(original);
         final BlockPos.MutableBlockPos localPosition = new BlockPos.MutableBlockPos();
         final BlockPos.MutableBlockPos heightmapPos = new BlockPos.MutableBlockPos();
         final Vector3d tempProbePosition = new Vector3d();
 
         for (final SubLevel subLevel : all) {
             final ClientSubLevel clientSubLevel = (ClientSubLevel) subLevel;
-//            final BlockPos localPosition = BlockPos.containing(clientSubLevel.renderPose().transformPositionInverse(probePosition));
+
             clientSubLevel.renderPose().transformPositionInverse(probePosition, tempProbePosition);
             localPosition.set(tempProbePosition.x, tempProbePosition.y, tempProbePosition.z);
 
@@ -96,14 +93,14 @@ public abstract class EntityRendererMixin {
 
     @Redirect(method = "getBlockLightLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;getBrightness(Lnet/minecraft/world/level/LightLayer;Lnet/minecraft/core/BlockPos;)I"))
     private int sable$getBlockLightLevel(final Level instance, final LightLayer lightLayer, final BlockPos blockPos) {
-        return sable$getSubLevelAccountedBlockLight(instance, lightLayer, blockPos, JOMLConversion.atCenterOf(blockPos));
+        return sable$getSubLevelAccountedBlockLight(-1, instance, lightLayer, blockPos, JOMLConversion.atCenterOf(blockPos));
     }
 
     @Unique
-    private static int sable$getSubLevelAccountedBlockLight(final Level instance, final LightLayer lightLayer, final BlockPos blockPos, final Vector3dc lightProbePosition) {
-        final Iterable<SubLevel> all = Sable.HELPER.getAllIntersecting(instance, new BoundingBox3d(blockPos));
+    private static int sable$getSubLevelAccountedBlockLight(final int original, final Level instance, final LightLayer lightLayer, final BlockPos blockPos, final Vector3dc lightProbePosition) {
+        final Iterable<SubLevel> all = Sable.HELPER.getAllIntersecting(instance, new BoundingBox3d(blockPos).expand(2.0));
 
-        int l = instance.getBrightness(LightLayer.BLOCK, blockPos);
+        int l = original == -1 ? instance.getBrightness(lightLayer, blockPos) : LightTexture.block(original);
         final BlockPos.MutableBlockPos probeBlockPos = new BlockPos.MutableBlockPos();
         final Vector3d tempProbePosition = new Vector3d();
 
