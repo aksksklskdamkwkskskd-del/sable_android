@@ -92,8 +92,10 @@ jobs:
 
       - name: build rust natives
         run: |
+          cd common/src/main/rust
+          export RUSTFLAGS="-C link-arg=-L$(pwd)/target/aarch64-linux-android/release"
           cargo build --release --target aarch64-linux-android
-
+          
       - name: mod building
         run: |
           chmod +x ./gradlew
@@ -119,7 +121,7 @@ jobs:
           cp imgui-bin/libimgui-java64.so io/imgui/java/native-bin/
           zip -u "$VEIL_INTERNAL_PATH" io/imgui/java/native-bin/libimgui-java64.so
           
-          RAPIER_SO=$(find target/aarch64-linux-android/release/ -name "libsable_rapier.so" | head -n 1)
+          RAPIER_SO=$(find . -name "libsable_rapier.so" | grep "aarch64-linux-android" | head -n 1)
           mkdir -p natives/sable_rapier
           cp "$RAPIER_SO" natives/sable_rapier/sable_rapier_aarch64_linux.so
           
@@ -127,13 +129,13 @@ jobs:
           zip -u "$FINAL_NAME" natives/sable_rapier/sable_rapier_aarch64_linux.so
 
           echo "ASSET_PATH=$FINAL_NAME" >> $GITHUB_ENV
-
+          
       - name: release
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.ASSET_PATH }}
           tag_name: ${{ github.event.inputs.build_ref }}
           name: "Sable Android ${{ github.event.inputs.build_ref }}"
-          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V3.0.1-PRE-TESTING (Active build tests not full release)\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
+          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V3.0.2-PRE-TESTING (Active build tests not full release)\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
