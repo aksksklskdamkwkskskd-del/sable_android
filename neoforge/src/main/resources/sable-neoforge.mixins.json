@@ -84,6 +84,7 @@
     "compatibility.create.big_outlines_interaction.BigOutlinesMixin",
     "compatibility.create.block_breakers.BlockBreakingKineticBlockEntityDamageMixin",
     "compatibility.create.block_breakers.BlockBreakingKineticBlockEntityMixin",
+    "compatibility.create.blueprint.BlueprintEntityMixin",
     "compatibility.create.chain_conveyor.ChainConveyorBlockEntityMixin",
     "compatibility.create.chain_conveyor.ChainConveyorBlockMixin",
     "compatibility.create.contraptions.AbstractContraptionEntityMixin",

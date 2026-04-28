@@ -10,8 +10,6 @@ import net.jpountz.lz4.LZ4FrameInputStream;
 import net.minecraft.Util;
 import net.minecraft.Util.OS;
 import net.minecraft.server.level.ServerLevel;
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.jetbrains.annotations.ApiStatus;
 import org.joml.Matrix3dc;
 import org.joml.Vector3dc;
@@ -22,6 +20,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * Java side of the sable_rapier bridge for using the Rapier 3D physics engine.
@@ -62,9 +62,9 @@ public class Rapier3D {
 
     private static void loadLibrary() {
         final String nativeName = getNativeName();
-        try (final InputStream is = Rapier3D.class.getResourceAsStream("/natives/" + LIB_NAME + "/sable_rapier_binaries.tar.l4z")) {
+        try (final InputStream is = Rapier3D.class.getResourceAsStream("/natives/" + LIB_NAME + "/sable_rapier_binaries.zip.l4z")) {
             if (is == null) {
-                throw new FileNotFoundException("sable_rapier_binaries.tar.l4z");
+                throw new FileNotFoundException("sable_rapier_binaries.zip.l4z");
             }
 
             final Path dir = Paths.get(NATIVE_DIR);
@@ -73,9 +73,9 @@ public class Rapier3D {
             }
 
             try (final LZ4FrameInputStream is2 = new LZ4FrameInputStream(is);
-                 final TarArchiveInputStream ti = new TarArchiveInputStream(is2)) {
+                 final ZipInputStream ti = new ZipInputStream(is2)) {
 
-                TarArchiveEntry entry;
+                ZipEntry entry;
                 while ((entry = ti.getNextEntry()) != null) {
                     if (entry.getName().equals(nativeName)) {
                         final Path tempFile = dir.resolve(nativeName);
@@ -648,6 +648,7 @@ public class Rapier3D {
     @ApiStatus.Internal
     public static native void configMinIslandSize(int islandSize);
 
+    @ApiStatus.Internal
     public static native void dispose();
 
     @ApiStatus.Internal
