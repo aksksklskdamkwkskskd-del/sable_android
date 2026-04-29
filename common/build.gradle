@@ -15,19 +15,19 @@ plugins {
 }
 
 def mac(arch) {
-    [triple: "${arch}-apple-darwin", arch: arch, os: "macos", ext: "dylib", lib: true]
+    [triple: "${arch}-apple-darwin", suffix: "", arch: arch, os: "macos", ext: "dylib", lib: true]
 }
 
 def linux(arch) {
-    [triple: "${arch}-unknown-linux-gnu", arch: arch, os: "linux", ext: "so", lib: true]
+    [triple: "${arch}-unknown-linux-gnu", suffix: ".2.17", arch: arch, os: "linux", ext: "so", lib: true]
 }
 
 def freebsd(arch) {
-    [triple: "${arch}-unknown-freebsd", arch: arch, os: "freebsd", ext: "so", lib: true]
+    [triple: "${arch}-unknown-freebsd", suffix: "", arch: arch, os: "freebsd", ext: "so", lib: true]
 }
 
 def windows(arch) {
-    [triple: "${arch}-pc-windows-msvc", arch: arch, os: "windows", ext: "dll", lib: false]
+    [triple: "${arch}-pc-windows-msvc", suffix: "", arch: arch, os: "windows", ext: "dll", lib: false]
 }
 
 def supportedTargets = [
@@ -107,12 +107,12 @@ def compileRustTaskName = { target ->
 
 def commandLineForTarget(target) {
     if (target.triple.contains('msvc')) {
-        [project.ext.xWinCargo, 'xwin', 'build', '--target', target.triple].flatten()
+        [project.ext.xWinCargo, 'xwin', 'build', '--target', target.triple + target.suffix].flatten()
         // support meme platforms, this does nothing by default because the target is disabled
     } else if (target.triple == 'aarch64-unknown-freebsd') {
-        [project.ext.zigbuildCargo, 'zigbuild', '-Z', 'build-std', '--target', target.triple].flatten()
+        [project.ext.zigbuildCargo, 'zigbuild', '-Z', 'build-std', '--target', target.triple + target.suffix].flatten()
     } else {
-        [project.ext.zigbuildCargo, 'zigbuild', '--target', target.triple].flatten()
+        [project.ext.zigbuildCargo, 'zigbuild', '--target', target.triple + target.suffix].flatten()
     }
 }
 

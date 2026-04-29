@@ -1,8 +1,2 @@
- - Add more compatability for various modded block masses
- - Change how we distriute and load Sable Rapier binaries
- - Update the Rapier fork to latest and tweak some physics settings
- - Fix Vista compatibility causing Televisions to weirdly cull
- - Fix issues with Lectern Linked Controllers
- - Fix a few visual issues with Iris
- - Adjust entity lighting mixins
- - Update Sable Companion
+ - Fix issues with glibc support on Linux Sable Rapier natives
+ - Fix Create Blueprints not working on sub-levels
