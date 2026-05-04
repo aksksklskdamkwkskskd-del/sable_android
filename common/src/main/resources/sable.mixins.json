@@ -159,6 +159,7 @@
     "entity.tamed_teleport.TamableAnimalMixin",
     "entity.teleport_players.ServerPlayerMixin",
     "entity.tnt_jumps.PrimedTntMixin",
+    "entity.trident.ThrownTridentMixin",
     "explosion.ExplosionMixin",
     "explosion.ServerLevelMixin",
     "extension.EntityMixin",
