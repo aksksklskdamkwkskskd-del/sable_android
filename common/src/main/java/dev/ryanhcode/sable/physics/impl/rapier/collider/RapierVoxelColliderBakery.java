@@ -34,7 +34,7 @@ public class RapierVoxelColliderBakery {
      * @param blockGetter the level to collide with
      */
     public RapierVoxelColliderBakery(@NotNull final BlockGetter blockGetter) {
-        this.level = blockGetter;
+        this.level = new PhysicsColliderBlockGetter(blockGetter);
     }
 
     /**

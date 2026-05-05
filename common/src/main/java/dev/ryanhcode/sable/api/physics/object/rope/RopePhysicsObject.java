@@ -155,7 +155,9 @@ public class RopePhysicsObject implements ArbitraryPhysicsObject {
      */
     @Override
     public void wakeUp() {
-        this.handle.wakeUp();
+        if (this.isActive()) {
+            this.handle.wakeUp();
+        }
     }
 
     public boolean isActive() {
