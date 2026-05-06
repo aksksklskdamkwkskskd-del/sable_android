@@ -124,6 +124,7 @@
     "compatibility.create.inventory_manipulation.ChuteBlockEntityMixin",
     "compatibility.create.lectern_controller.LecternControllerBlockEntityMixin",
     "compatibility.create.lectern_controller.LecternControllerBlockMixin",
+    "compatibility.create.mechnical_arm.MechanicalArmBlockEntity",
     "compatibility.create.mechnical_arm.MechanicalArmSublevelFailure",
     "compatibility.create.nozzle.NozzleBlockEntityAccessor",
     "compatibility.create.nozzle.block_entity.NozzleBEFixesMixin",
