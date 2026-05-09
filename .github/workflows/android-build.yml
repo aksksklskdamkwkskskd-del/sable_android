@@ -79,17 +79,26 @@ jobs:
         with:
           ndk-version: r27b
 
-      - run: |
+      - name: Configure Cargo
+        run: |
           cd common/src/main/rust
           TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
           mkdir -p .cargo
-          
           cat <<EOF > .cargo/config.toml
           [target.aarch64-linux-android]
           linker = "$TOOLCHAIN/bin/aarch64-linux-android34-clang"
+          rustflags = [
+            "-C", "link-arg=-Wl,--export-dynamic",
+            "-C", "link-arg=-Wl,--no-gc-sections",
+            "-C", "link-arg=-landroid",
+            "-C", "link-arg=-llog"
+          ]
           EOF
-          
-          export RUSTFLAGS="-C link-arg=-L$(pwd)/target/aarch64-linux-android/release -C link-arg=-Wl,--export-dynamic"
+
+      - name: Build Rust Stuff
+        run: |
+          cd common/src/main/rust
+          cargo clean
           cargo build --release --target aarch64-linux-android
 
       - uses: actions/setup-java@v4
