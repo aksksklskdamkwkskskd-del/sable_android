@@ -7,18 +7,22 @@ import dev.ryanhcode.sable.Sable;
 import dev.ryanhcode.sable.companion.math.BoundingBox3d;
 import dev.ryanhcode.sable.sublevel.SubLevel;
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 @Mixin(TrackGraphVisualizer.class)
 public class TrackGraphVisualizerMixin {
 
-    @WrapOperation(method = "debugViewGraph", at = @At(value = "FIELD", target = "Lcom/simibubi/create/content/trains/graph/TrackGraphBounds;box:Lnet/minecraft/world/phys/AABB;"))
+    @WrapOperation(method = "debugViewGraph", at = @At(value = "FIELD", target = "Lcom/simibubi/create/content/trains/graph/TrackGraphBounds;box:Lnet/minecraft/world/phys/AABB;", opcode = Opcodes.GETFIELD))
     private static AABB debugViewGraph(final TrackGraphBounds instance,
                                        final Operation<AABB> original) {
+        if (instance.box == null) return original.call(instance);
+
         final Level level = Minecraft.getInstance().level;
         if (level == null) return original.call(instance);
 
@@ -36,7 +40,7 @@ public class TrackGraphVisualizerMixin {
                                          final Operation<Double> original) {
         final Level level = Minecraft.getInstance().level;
         if (level == null) return original.call(location, camera);
-        return Sable.HELPER.projectOutOfSubLevel(level, location).distanceTo(camera);
+        return Math.sqrt(Sable.HELPER.distanceSquaredWithSubLevels(level, location, camera));
     }
 
 }

@@ -9,6 +9,9 @@ on:
       - '**/settings.gradle'
       - '**/build.gradle'
       - '.github/workflows/gametests.yml'
+  pull_request:
+    branches:
+      - 'main'
 
 jobs:
   build:

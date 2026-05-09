@@ -101,6 +101,7 @@
     "compatibility.create.entity_falls_on_block.BasinBlockMixin",
     "compatibility.create.entity_falls_on_block.BeltMillstoneBlocksMixin",
     "compatibility.create.entity_falls_on_block.SawBlockMixin",
+    "compatibility.create.entity_falls_on_block.SeatBlockMixin",
     "compatibility.create.factory_panel.FactoryPanelConnectionHandlerMixin",
     "compatibility.create.fans_provide_force.EncasedFanBlockEntityMixin",
     "compatibility.create.fluid_handling.OpenEndedPipeMixin",
