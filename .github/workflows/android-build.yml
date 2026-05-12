@@ -175,8 +175,8 @@ jobs:
             zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
           fi
           
-          mkdir -p fake_natives_dir/linux-aarch64
-          cp ../native-bin/libsable_rapier.so fake_natives_dir/linux-aarch64/
+          mkdir -p fake_natives_dir
+          cp ../native-bin/libsable_rapier.so fake_natives_dir/sable_rapier_aarch64_linux.so
           
           cd fake_natives_dir
           zip -r ../sable_rapier_binaries.zip ./*
