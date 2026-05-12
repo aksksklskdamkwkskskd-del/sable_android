@@ -90,7 +90,7 @@ jobs:
           linker = "$TOOLCHAIN/bin/aarch64-linux-android34-clang"
           EOF
           
-          export RUSTFLAGS="-C link-arg=-L$(pwd)/target/aarch64-linux-android/release -C link-arg=-Wl,--export-dynamic -C link-arg=-Wl,--no-gc-sections"
+          export RUSTFLAGS="-C link-arg=-Wl,--export-dynamic -C link-arg=-Wl,--no-gc-sections"
           cargo clean
           cargo build --release --target aarch64-linux-android
 
@@ -123,6 +123,14 @@ jobs:
     needs: [build-imgui, build-sable]
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      - name: Install lz4 (Python)
+        run: pip install lz4
+
       - uses: actions/download-artifact@v4
         with:
           name: imgui-native
@@ -138,14 +146,12 @@ jobs:
           name: sable-raw-jar
           path: assemble
 
-      - name: Injection
+      - name: Assembly and Injection
         run: |
           cd assemble
           VER=$(echo ${{ github.event.inputs.build_ref }} | sed 's/refs\/tags\///')
           FINAL_NAME="sable-ANDROID-${{ github.event.inputs.loader }}.jar"
           mv sable-raw.jar "$FINAL_NAME"
-          
-          zip -d "$FINAL_NAME" libsable_rapier.so || true
           
           VEIL_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep -oE "META-INF/(jarjar|jars)/veil-.*\.jar" | head -n 1)
           if [ -n "$VEIL_INTERNAL_PATH" ]; then
@@ -156,9 +162,26 @@ jobs:
             zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
           fi
           
+          mkdir -p fake_natives_dir/linux-aarch64
+          cp ../native-bin/libsable_rapier.so fake_natives_dir/linux-aarch64/
+          
+          cd fake_natives_dir
+          zip -r ../sable_rapier_binaries.zip ./*
+          cd ..
+          
+          python3 -c "
+          import lz4.frame
+          with open('sable_rapier_binaries.zip', 'rb') as f_in:
+              data = f_in.read()
+          
+          compressed = lz4.frame.compress(data, block_linked=False)
+          with open('sable_rapier_binaries.zip.l4z', 'wb') as f_out:
+              f_out.write(compressed)
+          "
+          
           mkdir -p natives/sable_rapier
-          cp ../native-bin/libsable_rapier.so natives/sable_rapier/sable_rapier_aarch64_linux.so
-          zip -u "$FINAL_NAME" natives/sable_rapier/sable_rapier_aarch64_linux.so
+          mv sable_rapier_binaries.zip.l4z natives/sable_rapier/
+          zip -u "$FINAL_NAME" natives/sable_rapier/sable_rapier_binaries.zip.l4z
           
           echo "ASSET_PATH=assemble/$FINAL_NAME" >> $GITHUB_ENV
 
@@ -167,6 +190,6 @@ jobs:
           files: ${{ env.ASSET_PATH }}
           tag_name: ${{ github.event.inputs.build_ref }}
           name: "Sable Android ${{ github.event.inputs.build_ref }}"
-          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V4.1.0-PRE-TESTING (Active build tests not full release)\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
+          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V5.0-PRE-TESTING (Active build tests not full release)\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
