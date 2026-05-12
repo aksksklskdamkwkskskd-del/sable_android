@@ -70,7 +70,7 @@ jobs:
           if [ -f "$TARGET_FILE" ]; then
             echo "PATCH, $TARGET_FILE"
             sed -i 's/pub extern "system"/pub extern "C"/g' "$TARGET_FILE"
-            sed -i 's/\[unsafe(no_mangle)\]/\[no_mangle\]/g' "$TARGET_FILE"
+            sed -i 's/\[no_mangle\]/\[unsafe(no_mangle)\]/g' "$TARGET_FILE"
           else
             echo "PATCH, $TARGET_FILE not found"
             exit 1
@@ -203,6 +203,6 @@ jobs:
           files: ${{ env.ASSET_PATH }}
           tag_name: ${{ github.event.inputs.build_ref }}
           name: "Sable Android ${{ github.event.inputs.build_ref }}"
-          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V5.2-PRE-TESTING (Active build tests not full release)\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
+          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V5.3-PRE-TESTING (Active build tests not full release)\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
