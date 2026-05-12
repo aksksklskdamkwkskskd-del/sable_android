@@ -66,13 +66,13 @@ jobs:
 
       - name: Patch lib.rs
         run: |
-          RUST_LIB=$(find common/src/main/rust -name "lib.rs")
-          if [ -n "$RUST_LIB" ]; then
-            echo "PATCH, $RUST_LIB"
-            sed -i 's/pub extern "system"/pub extern "C"/g' "$RUST_LIB"
-            sed -i 's/\[unsafe(no_mangle)\]/\[no_mangle\]/g' "$RUST_LIB"
+          TARGET_FILE="common/src/main/rust/rapier/src/lib.rs"
+          if [ -f "$TARGET_FILE" ]; then
+            echo "PATCH, $TARGET_FILE"
+            sed -i 's/pub extern "system"/pub extern "C"/g' "$TARGET_FILE"
+            sed -i 's/\[unsafe(no_mangle)\]/\[no_mangle\]/g' "$TARGET_FILE"
           else
-            echo "PATCH, lib.rs not found"
+            echo "PATCH, $TARGET_FILE not found"
             exit 1
           fi
 
@@ -203,6 +203,6 @@ jobs:
           files: ${{ env.ASSET_PATH }}
           tag_name: ${{ github.event.inputs.build_ref }}
           name: "Sable Android ${{ github.event.inputs.build_ref }}"
-          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V5.1-PRE-TESTING (Active build tests not full release)\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
+          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V5.2-PRE-TESTING (Active build tests not full release)\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
