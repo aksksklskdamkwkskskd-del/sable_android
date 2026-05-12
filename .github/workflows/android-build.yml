@@ -64,6 +64,18 @@ jobs:
             sed -i 's|private static final String NATIVE_DIR = ".sable/natives";|private static final String NATIVE_DIR = System.getProperty("java.io.tmpdir") + "/.sable/natives";|g' "$RAPIER_FILE"
           fi
 
+      - name: Patch lib.rs
+        run: |
+          RUST_LIB=$(find common/src/main/rust -name "lib.rs")
+          if [ -n "$RUST_LIB" ]; then
+            echo "PATCH, $RUST_LIB"
+            sed -i 's/pub extern "system"/pub extern "C"/g' "$RUST_LIB"
+            sed -i 's/\[unsafe(no_mangle)\]/\[no_mangle\]/g' "$RUST_LIB"
+          else
+            echo "PATCH, lib.rs not found"
+            exit 1
+          fi
+
       - name: Get Rust Version
         run: |
           RUST_VER=$(grep 'channel' common/src/main/rust/rust-toolchain.toml | cut -d '"' -f 2)
@@ -90,7 +102,8 @@ jobs:
           linker = "$TOOLCHAIN/bin/aarch64-linux-android34-clang"
           EOF
           
-          export RUSTFLAGS="-C link-arg=-Wl,--export-dynamic -C link-arg=-Wl,--no-gc-sections"
+          export RUSTFLAGS="-C link-arg=-Wl,--export-dynamic -C link-arg=-Wl,--no-gc-sections -C link-arg=-Wl,--undefined=Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_initialize"
+          
           cargo clean
           cargo build --release --target aarch64-linux-android
 
@@ -150,7 +163,7 @@ jobs:
         run: |
           cd assemble
           VER=$(echo ${{ github.event.inputs.build_ref }} | sed 's/refs\/tags\///')
-          FINAL_NAME="sable-ANDROID-${{ github.event.inputs.loader }}.jar"
+          FINAL_NAME="sable-ANDROID-${{ github.event.inputs.build_ref }}.jar"
           mv sable-raw.jar "$FINAL_NAME"
           
           VEIL_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep -oE "META-INF/(jarjar|jars)/veil-.*\.jar" | head -n 1)
@@ -190,6 +203,6 @@ jobs:
           files: ${{ env.ASSET_PATH }}
           tag_name: ${{ github.event.inputs.build_ref }}
           name: "Sable Android ${{ github.event.inputs.build_ref }}"
-          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V5.0-PRE-TESTING (Active build tests not full release)\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
+          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V5.1-PRE-TESTING (Active build tests not full release)\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
