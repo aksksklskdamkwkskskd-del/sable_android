@@ -41,6 +41,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.CrashReport;
+import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -115,8 +116,10 @@ public class RapierPhysicsPipeline implements PhysicsPipeline {
         try {
             Rapier3D.initialize(this.sceneId, gravity.x(), gravity.y(), gravity.z(), universalDrag);
         } catch (final UnsatisfiedLinkError e) {
-            Sable.LOGGER.error("Sable has failed to link with the natives for its Rapier pipeline. Please report with system details to " + Sable.ISSUE_TRACKER_URL);
-            final CrashReport crashReport = CrashReport.forThrowable(e, "Sable linking with Rapier natives");
+            Sable.LOGGER.error("Sable has failed to link with the natives for its Rapier pipeline. Please report with system details to " + Sable.ISSUE_TRACKER_URL, e);
+            final CrashReport crashReport = CrashReport.forThrowable(e.getCause(), "Sable linking with Rapier natives");
+            final CrashReportCategory category = crashReport.addCategory("Natives");
+            category.setDetail("Name", Rapier3D.NATIVE_NAME);
             throw new ReportedException(crashReport);
         }
     }
