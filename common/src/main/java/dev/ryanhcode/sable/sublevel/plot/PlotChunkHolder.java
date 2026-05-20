@@ -23,7 +23,6 @@ import java.util.concurrent.Executor;
  * A chunk holder for chunks that live inside a {@link LevelPlot}.
  */
 public class PlotChunkHolder extends ChunkHolder {
-
     private final LevelChunk chunk;
     private final HeatDataChunkSection[] heatSections;
 

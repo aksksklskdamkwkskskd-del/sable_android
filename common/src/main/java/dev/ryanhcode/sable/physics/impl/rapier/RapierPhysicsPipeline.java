@@ -129,7 +129,7 @@ public class RapierPhysicsPipeline implements PhysicsPipeline {
      */
     @Override
     public void dispose() {
-        Rapier3D.dispose();
+        Rapier3D.dispose(this.sceneId);
     }
 
     /**

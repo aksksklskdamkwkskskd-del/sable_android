@@ -21,6 +21,7 @@ public final class SableClientConfig {
 
     public static final ModConfigSpec SPEC;
 
+    public static final ModConfigSpec.BooleanValue ATTEMPT_UDP_NETWORKING;
     public static final ModConfigSpec.BooleanValue SUB_LEVEL_DYNAMIC_SHADING;
     public static final ModConfigSpec.BooleanValue SUB_LEVEL_WATER_OCCLUSION;
     public static final ModConfigSpec.BooleanValue SUB_LEVEL_SKYLIGHT_SHADOWS;
@@ -30,6 +31,7 @@ public final class SableClientConfig {
 
     static {
         final ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+
 
         SUB_LEVEL_DYNAMIC_SHADING = builder
                 .comment("Whether sub-levels should apply block shading dynamically")
@@ -51,7 +53,9 @@ public final class SableClientConfig {
         ZOOM_SENSITIVITY = builder
                 .comment("The zoom sensitivity for sub-level camera types")
                 .defineInRange("sub_level_zoom_sensitivity", 0.2, 0.0, 100.0);
-
+        ATTEMPT_UDP_NETWORKING = builder
+                .comment("If Sable should attempt to establish a UDP connection with the server, to receive sub-level movement data over a UDP channel")
+                .define("attempt_udp_networking", true);
 
         SPEC = builder.build();
     }

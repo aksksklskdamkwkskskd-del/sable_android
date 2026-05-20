@@ -658,7 +658,7 @@ public class Rapier3D {
     public static native void configMinIslandSize(int islandSize);
 
     @ApiStatus.Internal
-    public static native void dispose();
+    public static native void dispose(int sceneId);
 
     @ApiStatus.Internal
     public static void setMassPropertiesFrom(final int dimensionID, final int id, final MassData massTracker) {
