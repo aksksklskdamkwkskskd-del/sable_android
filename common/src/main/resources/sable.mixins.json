@@ -40,6 +40,7 @@
     "entity.entity_rotations_and_riding.LocalPlayerMixin",
     "entity.entity_sublevel_collision.CameraMixin",
     "entity.entity_swimming.CameraMixin",
+    "entity.parrot.ParrotMixin",
     "options.OptionsScreenMixin",
     "particle.BlockMarkerMixin",
     "particle.ClientLevelMixin",
