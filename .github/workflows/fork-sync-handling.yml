@@ -20,6 +20,7 @@ jobs:
           token: ${{ secrets.SYNC_TOKEN }}
 
       - name: Sync Tags
+        shell: bash
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
@@ -29,36 +30,61 @@ jobs:
           git fetch upstream --tags
           git checkout main
           git merge upstream/main --no-edit -X ours
+          
           git push origin main
           git push origin --tags
 
       - name: Trigger Builds
         env:
           GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        shell: bash
         run: |
           TAGS=$(git tag -l "mc*-*")
           
+          PHASES=(
+            "1.0.5|android-build-A-103-105.yml"
+            "1.2.1|android-build-B-106-121.yml"
+          )
+          
+          FALLBACK_WORKFLOW="android-build.yml"
+
           for TAG in $TAGS; do
             if ! gh release view --repo "$GITHUB_REPOSITORY" "$TAG" > /dev/null 2>&1; then
-              echo "++ $TAG ++ (New release version found)"
+              echo "++ $TAG ++ (New Version)"
+              
+              VER=$(echo "$TAG" | cut -d'-' -f2)
+              
+              WORKFLOW="$FALLBACK_WORKFLOW"
+
+              for PHASE in "${PHASES[@]}"; do
+                LIMIT="${PHASE%%|*}"
+                FILE="${PHASE##*|}"
+                
+                if [ "$(printf '%s\n%s' "$VER" "$LIMIT" | sort -V | head -n1)" = "$VER" ]; then
+                  WORKFLOW="$FILE"
+                  break
+                fi
+              done
+              
+              echo "[$TAG] (Parsed: v$VER) >> $WORKFLOW"
               
               if [[ "$TAG" == *"fabric"* ]]; then
-                gh workflow run android-build.yml --repo ${{ github.repository }} --ref main \
+                gh workflow run "$WORKFLOW" --repo ${{ github.repository }} --ref main \
                   -f loader=fabric -f build_ref="$TAG"
                   
               elif [[ "$TAG" == *"neoforge"* ]]; then
-                gh workflow run android-build.yml --repo ${{ github.repository }} --ref main \
+                gh workflow run "$WORKFLOW" --repo ${{ github.repository }} --ref main \
                   -f loader=neoforge -f build_ref="$TAG"
                   
               else
-                gh workflow run android-build.yml --repo ${{ github.repository }} --ref main \
+                gh workflow run "$WORKFLOW" --repo ${{ github.repository }} --ref main \
                   -f loader=neoforge -f build_ref="$TAG"
-                gh workflow run android-build.yml --repo ${{ github.repository }} --ref main \
+                gh workflow run "$WORKFLOW" --repo ${{ github.repository }} --ref main \
                   -f loader=fabric -f build_ref="$TAG"
               fi
-              
+             
               sleep 5
             else
-              echo "-- $TAG -- (Skipped, already has a release)"
+              echo "-- $TAG -- (Skipped)"
             fi
           done
