@@ -10,13 +10,6 @@
 </div>
 </h1>
 
-# IMPORTANT (Updates about builds)
-> [!IMPORTANT]
-> ~Builds are broken and being tested at the moment.
-> Please wait for new fixed releases.~
-> Now using already existing methods to generate builds. Which is very likely to be unstable (general) and incompatible on newer versions (at least above 1.0.6+)
-> Still working on them when I have time to look into. Please be patient, I'm an amateur. :)
-
 # What
 
 This is Create Simulated's -> <a href=https://github.com/ryanhcode/sable>Sable</a> engine, ported to android.
@@ -26,6 +19,21 @@ Which is required for Create Aeronautics physics to work.
 ## Create Aeronautics on Android!
 
 <b>With this repo, now you can play Create Aeronautics on android!<br>(via any pajov based launcher)</b>
+
+# IMPORTANT
+
+About builds:
+
+> [!IMPORTANT]
+> Now most of the releases fixed.
+> Not all tested but should work.
+
+> [!NOTE]
+> Fabric, still none tested but has an release anyway.
+
+> [!NOTE]
+> This README needs some update.
+> Some information might be deprecated, be aware.
 
 # How can I..?
 
@@ -38,10 +46,15 @@ Sable from releases, anything else from their sources as usual.
 - Fabric **is** included but **not tested** (Please inform me about Fabric, is it working fine?)
 
 - Tested on Amethyst Launcher (pajov fork, some late 2025 version) on Android 14.
-- Using Java 21 seems fine.
-- Mali (GPU) users may use Zink.
+- Using Java 21 works fine.
+- Using MobileGlues or Zink seems fine.
 
-- You can inform me about issues _caused by the port_. 
+#### Issues
+
+- You can inform me about issues _caused by the port_.
+- Please make sure it happens even if all other mods disabled. Try using base mods: Create, **Android Sable**, Create Aeronautics.
+- Using Sodium and Podium should be ok.
+- Try different versions to make sure.
 
 #### Classic Mod Installing Steps
 
@@ -101,12 +114,15 @@ or similar.
 
 # Plans List
 - [x] Release building system.
-- [x] First release (NeoForge)
-- [x] Automation (auto deploy release)
-- [x] Extra: Fabric support **(NOT TESTED)**
-- [ ] Extra: Main instructions besides android-build.yml
+- [x] First release (NeoForge).
+- [x] Automation (auto deploy release).
+- [x] Extra: Fabric support **(NOT TESTED)**.
+- [x] FIX: Fix builds including all old versions.
+- [ ] Extra: Main instructions besides android-build.yml.
 
 # Details about building it (this)
+
+## OLD INFO
 
 Auto build via "Sable Native Android Port" action (.github/android-build.yml). Building it on github servers as github action.
 
