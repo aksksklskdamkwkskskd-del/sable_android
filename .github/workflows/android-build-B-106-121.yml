@@ -1,0 +1,187 @@
+name: Sable Native Android Port Version B 1.0.6 - 1.2.1
+
+on:
+  workflow_dispatch:
+    inputs:
+      loader:
+        description: 'Target Modloader'
+        required: true
+        default: 'neoforge'
+        type: choice
+        options:
+          - neoforge
+          - fabric
+      build_ref:
+        description: 'Tag or Branch to build'
+        required: true
+        default: 'main'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.build_ref }}-${{ github.event.inputs.loader }}
+  cancel-in-progress: true
+
+jobs:
+  build-imgui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.build_ref }}
+
+      - uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27b
+          add-to-path: true
+
+      - name: Build ImGui Natives
+        run: |
+          mkdir -p imgui-build
+          TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+          JNI_INCLUDE="$TOOLCHAIN/sysroot/usr/include"
+          
+          $TOOLCHAIN/bin/aarch64-linux-android34-clang++ -shared -fPIC \
+            -I$JNI_INCLUDE -I$JNI_INCLUDE/aarch64-linux-android \
+            $(find . -name "*.cpp" | grep "imgui") \
+            -o imgui-build/libimgui-java64.so -landroid -llog
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: imgui-native
+          path: imgui-build/libimgui-java64.so
+
+  build-sable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.build_ref }}
+          fetch-depth: 0
+
+      - name: Patch Rapier3D.java
+        run: |
+          RAPIER_FILE=$(find . -name "Rapier3D.java")
+          if [ -f "$RAPIER_FILE" ]; then
+            sed -i 's|private static final String NATIVE_DIR = ".sable/natives";|private static final String NATIVE_DIR = System.getProperty("java.io.tmpdir") + "/.sable/natives";|g' "$RAPIER_FILE"
+          fi
+
+      - name: Patch lib.rs
+        run: |
+          TARGET_FILE="common/src/main/rust/rapier/src/lib.rs"
+          if [ -f "$TARGET_FILE" ]; then
+            echo "PATCH, $TARGET_FILE"
+            sed -i 's/pub extern "system"/pub extern "C"/g' "$TARGET_FILE"
+            sed -i 's/\[no_mangle\]/\[unsafe(no_mangle)\]/g' "$TARGET_FILE"
+          else
+            echo "PATCH, $TARGET_FILE not found"
+            exit 1
+          fi
+
+      - name: Get Rust Version
+        run: |
+          RUST_VER=$(grep 'channel' common/src/main/rust/rust-toolchain.toml | cut -d '"' -f 2 || echo "")
+          if [ -z "$RUST_VER" ]; then
+            RUST_VER="nightly-2026-01-29"
+          fi
+          echo "RUST_VERSION=$RUST_VER" >> $GITHUB_ENV
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: aarch64-linux-android
+          components: rust-src
+
+      - uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27b
+
+      - name: Configure & Build Rust Stuff
+        run: |
+          cd common/src/main/rust
+          TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+          mkdir -p .cargo
+          
+          cat <<EOF > .cargo/config.toml
+          [target.aarch64-linux-android]
+          linker = "$TOOLCHAIN/bin/aarch64-linux-android34-clang"
+          EOF
+          
+          export RUSTFLAGS="-C link-arg=-Wl,--export-dynamic -C link-arg=-Wl,--no-gc-sections -C link-arg=-Wl,--undefined=Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_initialize"
+          
+          cargo clean
+          cargo build --release --target aarch64-linux-android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 21
+          cache: gradle
+
+      - name: Build The Mod
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :${{ github.event.inputs.loader }}:build -x test
+
+      - run: |
+          SABLE_JAR=$(find ${{ github.event.inputs.loader }}/build/libs/ -name "*.jar" ! -name "*-sources.jar" ! -name "*-dev.jar" | head -n 1)
+          cp "$SABLE_JAR" sable-raw.jar
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sable-raw-jar
+          path: sable-raw.jar
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rapier-native
+          path: common/src/main/rust/target/aarch64-linux-android/release/libsable_rapier.so
+
+  assemble:
+    needs: [build-imgui, build-sable]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: imgui-native
+          path: native-bin
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: rapier-native
+          path: native-bin
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sable-raw-jar
+          path: assemble
+
+      - name: Assembly and Injection
+        run: |
+          cd assemble
+          VER=$(echo ${{ github.event.inputs.build_ref }} | sed 's/refs\/tags\///')
+          FINAL_NAME="sable-ANDROID-${VER}.jar"
+          mv sable-raw.jar "$FINAL_NAME"
+          
+          VEIL_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep -oE "META-INF/(jarjar|jars)/veil-.*\.jar" | head -n 1)
+          if [ -n "$VEIL_INTERNAL_PATH" ]; then
+            unzip "$FINAL_NAME" "$VEIL_INTERNAL_PATH" -d .
+            mkdir -p io/imgui/java/native-bin
+            cp ../native-bin/libimgui-java64.so io/imgui/java/native-bin/
+            zip -u "$VEIL_INTERNAL_PATH" io/imgui/java/native-bin/libimgui-java64.so
+            zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
+          fi
+          
+          mkdir -p natives/sable_rapier
+          cp ../native-bin/libsable_rapier.so natives/sable_rapier/sable_rapier_aarch64_linux.so
+          
+          zip -u "$FINAL_NAME" natives/sable_rapier/sable_rapier_aarch64_linux.so
+          
+          echo "ASSET_PATH=assemble/$FINAL_NAME" >> $GITHUB_ENV
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ASSET_PATH }}
+          tag_name: ${{ github.event.inputs.build_ref }}
+          name: "Sable Android ${{ github.event.inputs.build_ref }}"
+          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build B V1.0.0 (Legacy Loading)\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
