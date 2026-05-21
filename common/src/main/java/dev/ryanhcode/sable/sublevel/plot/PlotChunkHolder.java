@@ -14,6 +14,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.lighting.LevelLightEngine;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
@@ -167,7 +168,7 @@ public class PlotChunkHolder extends ChunkHolder {
     }
 
     @Override
-    public @Nullable LevelChunk getTickingChunk() {
+    public @NotNull LevelChunk getTickingChunk() {
         return this.chunk;
     }
 
