@@ -628,12 +628,12 @@ public class RapierPhysicsPipeline implements PhysicsPipeline {
     @Override
     public <T extends PhysicsConstraintHandle> T addConstraint(@Nullable final ServerSubLevel sublevelA, @Nullable final ServerSubLevel sublevelB, final PhysicsConstraintConfiguration<T> configuration) {
         if (sublevelA == null && sublevelB == null) {
-            Sable.LOGGER.error("Cannot add a constraint between the static world and static world");
+            Sable.LOGGER.error("Cannot add a constraint between the static world and static world", new Throwable("Stack Trace"));
             return null;
         }
 
         if (sublevelA == sublevelB) {
-            Sable.LOGGER.error("Cannot add a constraint between a sub-level and itself");
+            Sable.LOGGER.error("Cannot add a constraint between a sub-level and itself", new Throwable("Stack Trace"));
             return null;
         }
 

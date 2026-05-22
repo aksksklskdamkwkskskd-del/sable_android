@@ -55,6 +55,7 @@
     "particle.SuspendedParticleMixin",
     "particle.TerrainParticleMixin",
     "player_freezing.LocalPlayerMixin",
+    "player_standup.PlayerMixin",
     "plot.ClientChunkCacheMixin",
     "plot.MinecraftMixin",
     "plot.lighting.ClientPacketListenerMixin",
