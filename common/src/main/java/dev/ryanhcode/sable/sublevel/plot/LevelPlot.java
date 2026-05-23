@@ -132,7 +132,9 @@ public abstract class LevelPlot {
     public BlockPos getCenterBlock() {
         // TODO make this the actual center
         final ChunkPos centerChunk = this.getCenterChunk();
-        return new BlockPos(centerChunk.getMinBlockX() + 8, 128, centerChunk.getMinBlockZ() + 8);
+        final Level level = this.subLevel.getLevel();
+        
+        return new BlockPos(centerChunk.getMinBlockX() + 8, (level.getMinBuildHeight() + level.getMaxBuildHeight()) / 2, centerChunk.getMinBlockZ() + 8);
     }
 
     /**
