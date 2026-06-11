@@ -5,11 +5,9 @@ use jni::objects::{JClass, JDoubleArray, JObject};
 use jni::sys::{jboolean, jdouble, jint};
 use marten::Real;
 use marten::level::{SableMethodID, VoxelColliderData};
-use rapier3d::na::Vector3;
+use rapier3d::glamx::IVec3;
 
 use crate::get_physics_state_mut;
-
-type IVec3 = Vector3<i32>;
 
 /// The physics data of a blockstate
 #[derive(Debug)]

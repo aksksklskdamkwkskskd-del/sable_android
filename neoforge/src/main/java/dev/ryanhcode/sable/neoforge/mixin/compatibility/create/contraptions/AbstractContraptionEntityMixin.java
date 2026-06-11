@@ -62,7 +62,7 @@ public abstract class AbstractContraptionEntityMixin extends Entity implements K
     @Unique
     private MassTracker sable$massTracker;
     @Unique
-    private boolean sable$added = false;
+    private boolean sable$initialized = false;
 
     public AbstractContraptionEntityMixin(final EntityType<?> arg, final Level arg2) {
         super(arg, arg2);
@@ -96,11 +96,18 @@ public abstract class AbstractContraptionEntityMixin extends Entity implements K
 
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Ljava/util/Map;entrySet()Ljava/util/Set;"), remap = false)
     private void sable$contraptionInitialize(final CallbackInfo ci) {
-        if (!this.sable$added && this.level() instanceof final ServerLevel serverLevel) {
+        if (!this.sable$initialized && this.level() instanceof final ServerLevel serverLevel) {
             this.sable$buildProperties();
+
+            if (this.sable$massTracker.getCenterOfMass() == null) {
+                // The contraption is effectively empty, quit early
+                this.sable$initialized = true;
+                return;
+            }
+
             this.sable$addToPlot();
             this.sable$addToPipeline(serverLevel);
-            this.sable$added = true;
+            this.sable$initialized = true;
         }
     }
 

@@ -2,7 +2,6 @@ use crate::PHYSICS_STATE;
 use crate::scene::LevelColliderID;
 use rapier3d::dynamics::MassProperties;
 use rapier3d::geometry::{Shape, ShapeType, TypedShape};
-use rapier3d::math::Vector;
 use rapier3d::parry::bounding_volume::{Aabb, BoundingSphere};
 use rapier3d::prelude::*;
 use std::f32::consts::PI;
@@ -133,7 +132,7 @@ impl Shape for LevelCollider {
         MassProperties {
             inv_mass: 0.0,
             inv_principal_inertia: AngVector::new(0.0, 0.0, 0.0),
-            local_com: Vector::ZERO,
+            local_com: Vec3::ZERO,
             principal_inertia_local_frame: Default::default(),
         }
     }

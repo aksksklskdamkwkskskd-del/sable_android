@@ -7,7 +7,10 @@ import org.jetbrains.annotations.ApiStatus;
 public interface SableChunkEventPlatform {
     SableChunkEventPlatform INSTANCE = SablePlatformUtil.load(SableChunkEventPlatform.class);
 
-    void onChunkPacketReplaced(final LevelChunk chunk);
+    void onClientChunkPacketReplaced(final LevelChunk chunk);
 
     void onOldChunkInvalid(final LevelChunk chunk);
+
+    void onPlotChunkLoaded(final LevelChunk chunk);
+
 }

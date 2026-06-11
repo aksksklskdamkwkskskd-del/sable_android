@@ -159,7 +159,6 @@ public class SubLevelTrackingSystem implements SubLevelObserver {
                     throw new IllegalStateException("Player not found immediately after tracking initializes");
                 }
 
-
                 CustomPacketPayload extraPacket = null;
 
                 if (splitFromSubLevelID != null && splitFromSubLevel != null) {

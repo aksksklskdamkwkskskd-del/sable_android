@@ -9,6 +9,7 @@ public final class SableConfig {
     public static final ModConfigSpec.BooleanValue SUB_LEVEL_SPLITTING;
     public static final ModConfigSpec.IntValue SUB_LEVEL_SPLITTING_HEATMAP_STEPS_PER_TICK;
     public static final ModConfigSpec.DoubleValue SUB_LEVEL_TRACKING_RANGE;
+    public static final ModConfigSpec.BooleanValue SUB_LEVELS_WITH_PLAYERS_CANNOT_UNLOAD;
     public static final ModConfigSpec.DoubleValue SUB_LEVEL_REMOVE_MIN;
     public static final ModConfigSpec.DoubleValue SUB_LEVEL_REMOVE_MAX;
     public static final ModConfigSpec.DoubleValue VELOCITY_RETAINED_ON_LOAD;
@@ -32,6 +33,9 @@ public final class SableConfig {
         SUB_LEVEL_TRACKING_RANGE = builder
                 .comment("The distance to network sub-levels to players at")
                 .defineInRange("sub_level_tracking_range", 320.0, 1.0, Double.MAX_VALUE);
+        SUB_LEVELS_WITH_PLAYERS_CANNOT_UNLOAD = builder
+                .comment("Keeps sub-levels with intersecting players from unloading at all")
+                .define("sub_levels_with_players_cannot_unload", true);
         SUB_LEVEL_REMOVE_MIN = builder
                 .comment("The minimum y coordinate sub-levels can exist at")
                 .defineInRange("sub_level_remove_min", -10_000, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);

@@ -18,7 +18,7 @@ mod voxel_collider;
 use jni::objects::{JClass, JDoubleArray, JIntArray};
 use jni::sys::{jboolean, jdouble, jint};
 use jni::{JNIEnv, JavaVM};
-use rapier3d::glamx::Quat;
+use rapier3d::glamx::{DVec3, Quat};
 use rapier3d::math::Vector;
 use std::collections::HashMap;
 
@@ -29,6 +29,7 @@ use crate::buoyancy::compute_buoyancy;
 use crate::collider::LevelCollider;
 use crate::dispatcher::SableDispatcher;
 use crate::event_handler::SableEventHandler;
+use crate::glamx::IVec3;
 use crate::groups::LEVEL_GROUP;
 use crate::joints::SableJointSet;
 use crate::rope::RopeMap;
@@ -42,7 +43,6 @@ use marten::level::{
     OCTREE_CHUNK_SIZE, OctreeChunkSection, VoxelPhysicsState,
 };
 use marten::octree::SubLevelOctree;
-use rapier3d::na::{Matrix3, Vector3 as NaVector3};
 use rapier3d::parry::query::{DefaultQueryDispatcher, QueryDispatcher};
 use rapier3d::prelude::*;
 use scene::{LevelColliderID, PhysicsScene};
@@ -52,9 +52,9 @@ pub struct ActiveLevelColliderInfo {
     pub collider: ColliderHandle,
     pub static_mount: Option<RigidBodyHandle>,
     pub fake_velocities: Option<RigidBodyVelocity<Real>>,
-    pub local_bounds_min: Option<NaVector3<i32>>,
-    pub local_bounds_max: Option<NaVector3<i32>>,
-    pub center_of_mass: Option<NaVector3<f64>>,
+    pub local_bounds_min: Option<IVec3>,
+    pub local_bounds_max: Option<IVec3>,
+    pub center_of_mass: Option<DVec3>,
     pub octree: Option<SubLevelOctree>,
     pub chunk_map: Option<ChunkMap>,
     pub scene_id: jint,
@@ -120,24 +120,16 @@ impl ActiveLevelColliderInfo {
     }
 
     /// Sets the local bounds for the object
-    pub fn set_local_bounds(&mut self, min: NaVector3<i32>, max: NaVector3<i32>, scene_id: jint) {
+    pub fn set_local_bounds(&mut self, min: IVec3, max: IVec3, scene_id: jint) {
         if Some(min) != self.local_bounds_min || Some(max) != self.local_bounds_max {
             self.local_bounds_min = Some(min);
             self.local_bounds_max = Some(max);
 
-            let max_axis = (max - min).max() as u32 + 1;
+            let max_axis = (max - min).max_element() as u32 + 1;
             let smallest_pow_2_above = max_axis.next_power_of_two();
 
-            let chunk_min = NaVector3::new(
-                min.x >> CHUNK_SHIFT,
-                min.y >> CHUNK_SHIFT,
-                min.z >> CHUNK_SHIFT,
-            );
-            let chunk_max = NaVector3::new(
-                max.x >> CHUNK_SHIFT,
-                max.y >> CHUNK_SHIFT,
-                max.z >> CHUNK_SHIFT,
-            );
+            let chunk_min = min >> CHUNK_SHIFT;
+            let chunk_max = max >> CHUNK_SHIFT;
 
             self.octree = Some(SubLevelOctree::new(
                 smallest_pow_2_above.trailing_zeros() as i32
@@ -260,10 +252,10 @@ pub struct PhysicsState {
 pub struct ReportedCollision {
     body_a: Option<LevelColliderID>,
     body_b: Option<LevelColliderID>,
-    local_point_a: NaVector3<f64>,
-    local_point_b: NaVector3<f64>,
-    local_normal_a: NaVector3<f64>,
-    local_normal_b: NaVector3<f64>,
+    local_point_a: DVec3,
+    local_point_b: DVec3,
+    local_normal_a: DVec3,
+    local_normal_b: DVec3,
     force_amount: f64,
 }
 
@@ -568,7 +560,7 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_set
                 .level_colliders
                 .get_mut(&(id as LevelColliderID))
                 .unwrap()
-                .center_of_mass = Some(NaVector3::new(x, y, z));
+                .center_of_mass = Some(DVec3::new(x, y, z));
         }
     }
 }
@@ -599,8 +591,8 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_set
                 .get_mut(&(id as LevelColliderID))
                 .unwrap()
                 .set_local_bounds(
-                    NaVector3::new(min_x, min_y, min_z),
-                    NaVector3::new(max_x, max_y, max_z),
+                    IVec3::new(min_x, min_y, min_z),
+                    IVec3::new(max_x, max_y, max_z),
                     scene_id,
                 );
         }
@@ -1092,16 +1084,22 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_set
     env.get_double_array_region(inertia, 0, &mut inertia_arr)
         .unwrap();
 
-    let inertia_tensor = Matrix3::new(
-        inertia_arr[0] as Real,
-        inertia_arr[1] as Real,
-        inertia_arr[2] as Real,
-        inertia_arr[3] as Real,
-        inertia_arr[4] as Real,
-        inertia_arr[5] as Real,
-        inertia_arr[6] as Real,
-        inertia_arr[7] as Real,
-        inertia_arr[8] as Real,
+    let inertia_tensor = Mat3::from_cols(
+        Vec3::new(
+            inertia_arr[0] as Real,
+            inertia_arr[1] as Real,
+            inertia_arr[2] as Real,
+        ),
+        Vec3::new(
+            inertia_arr[3] as Real,
+            inertia_arr[4] as Real,
+            inertia_arr[5] as Real,
+        ),
+        Vec3::new(
+            inertia_arr[6] as Real,
+            inertia_arr[7] as Real,
+            inertia_arr[8] as Real,
+        ),
     );
 
     let scene = get_scene_mut_ref(scene_id);

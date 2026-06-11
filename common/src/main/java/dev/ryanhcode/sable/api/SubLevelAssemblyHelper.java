@@ -290,6 +290,7 @@ public class SubLevelAssemblyHelper {
 
         final LevelAccelerator accelerator = new LevelAccelerator(level);
         final LevelAccelerator resultingAccelerator = new LevelAccelerator(resultingLevel);
+        final BlockState airState = Blocks.AIR.defaultBlockState();
 
         final List<BlockState> states = new ArrayList<>();
 
@@ -378,6 +379,8 @@ public class SubLevelAssemblyHelper {
                 if (state.getBlock() instanceof final BlockSubLevelAssemblyListener listener) {
                     listener.afterMove(level, resultingLevel, state, block, newPos);
                 }
+
+                level.onBlockStateChange(newPos, airState, state);
             } catch (final Exception e) {
                 Sable.LOGGER.error("Failed to move block {} at {} to {}", state, block, newPos, e);
             }
@@ -391,7 +394,7 @@ public class SubLevelAssemblyHelper {
             try {
                 final LevelChunk levelchunk = resultingAccelerator.getChunk(SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getZ()));
                 final BlockState subLevelState = states.get(i);
-                SubLevelAssemblyHelper.markAndNotifyBlock(resultingLevel, pos, levelchunk, Blocks.AIR.defaultBlockState(), subLevelState, 3, 512);
+                SubLevelAssemblyHelper.markAndNotifyBlock(resultingLevel, pos, levelchunk, airState, subLevelState, 3, 512);
             } catch (final Exception e) {
                 Sable.LOGGER.error("Failed to mark & notify block {} (untransformed = {})", pos, untransformed, e);
             }
@@ -402,13 +405,12 @@ public class SubLevelAssemblyHelper {
         SableAssemblyPlatform.INSTANCE.setIgnoreOnPlace(resultingLevel, true);
         // destroy all the old blocks
         for (final BlockPos block : blocks) {
-            final BlockState subLevelState = Blocks.AIR.defaultBlockState();
-
             try {
                 final LevelChunk chunk = accelerator.getChunk(SectionPos.blockToSectionCoord(block.getX()),
                         SectionPos.blockToSectionCoord(block.getZ()));
 
-                chunk.setBlockState(block, subLevelState, true);
+                level.onBlockStateChange(block, chunk.getBlockState(block), airState);
+                chunk.setBlockState(block, airState, true);
             } catch (final Exception e) {
                 Sable.LOGGER.error("Failed to destroy old block during assembly {}", block, e);
             }
@@ -416,7 +418,7 @@ public class SubLevelAssemblyHelper {
         SableAssemblyPlatform.INSTANCE.setIgnoreOnPlace(resultingLevel, false);
 
         for (final BlockPos block : blocks) {
-            final BlockState subLevelState = Blocks.AIR.defaultBlockState();
+            final BlockState subLevelState = airState;
             resultingLevel.sendBlockUpdated(block, Blocks.STONE.defaultBlockState(), subLevelState, 3);
         }
     }

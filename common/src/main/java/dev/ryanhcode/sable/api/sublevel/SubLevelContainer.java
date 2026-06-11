@@ -11,9 +11,7 @@ import dev.ryanhcode.sable.sublevel.plot.PlotChunkHolder;
 import dev.ryanhcode.sable.sublevel.storage.SubLevelOccupancySavedData;
 import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
 import dev.ryanhcode.sable.util.iterator.ListBackedFilterIterator;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
-import it.unimi.dsi.fastutil.objects.ObjectLists;
+import it.unimi.dsi.fastutil.objects.*;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
@@ -49,11 +47,11 @@ public abstract class SubLevelContainer {
     /**
      * All of the loaded sub-levels in the plotgrid
      */
-    private final List<SubLevel> allSubLevels = new ObjectArrayList<>();
+    private final List<SubLevel> allSubLevels = new ReferenceArrayList<>();
     /**
      * All of the loaded sub-levels in the plotgrid, by uuid
      */
-    private final Map<UUID, SubLevel> subLevelsByUUID = new HashMap<>();
+    private final Map<UUID, SubLevel> subLevelsByUUID = new Object2ObjectOpenHashMap<>();
     /**
      * The occupancy of the plotgrid, including loaded and unloaded plots
      */
@@ -61,7 +59,7 @@ public abstract class SubLevelContainer {
     /**
      * All observers/listeners for the plotgrid
      */
-    private final List<SubLevelObserver> observers = new ObjectArrayList<>();
+    private final List<SubLevelObserver> observers = new ReferenceArrayList<>();
 
     /**
      * The level of the plotgrid

@@ -7,8 +7,8 @@ use crate::{
 use marten::Real;
 use rapier3d::dynamics::RigidBody;
 use rapier3d::geometry::Aabb;
-use rapier3d::math::Vector;
-use rapier3d::na::Vector3;
+use rapier3d::glamx::{DVec3, IVec3};
+use rapier3d::math::Vec3;
 use rapier3d::prelude::RigidBodyVelocity;
 
 pub fn compute_buoyancy(scene: &mut PhysicsScene) {
@@ -46,24 +46,17 @@ pub fn compute_buoyancy(scene: &mut PhysicsScene) {
         );
         let vels: RigidBodyVelocity<Real> = *body.vels();
 
-        let complex = (local_bounds_max - local_bounds_min).sum() < 10;
+        let complex = (local_bounds_max - local_bounds_min).element_sum() < 10;
         for (static_pos, dynamic_pos) in pairs.iter() {
-            let local_pos = Vector3::<f64>::new(
-                dynamic_pos.x as f64 + 0.5,
-                dynamic_pos.y as f64 + 0.5,
-                dynamic_pos.z as f64 + 0.5,
-            );
-            let local_pos = Vector::new(
-                (local_pos.x - center_of_mass.x) as Real,
-                (local_pos.y - center_of_mass.y) as Real,
-                (local_pos.z - center_of_mass.z) as Real,
-            );
+            let local_pos = dynamic_pos.as_dvec3() + 0.5;
+            let local_pos = (local_pos - center_of_mass).as_vec3();
+
             if complex {
                 for i in 0..8 {
                     let x = (i & 1) * 2 - 1;
                     let y = ((i >> 1) & 1) * 2 - 1;
                     let z = ((i >> 2) & 1) * 2 - 1;
-                    let local_pos = Vector::new(
+                    let local_pos = Vec3::new(
                         local_pos.x + x as Real * 0.25,
                         local_pos.y + y as Real * 0.25,
                         local_pos.z + z as Real * 0.25,
@@ -93,32 +86,31 @@ pub fn compute_buoyancy(scene: &mut PhysicsScene) {
                 continue;
             }
 
-            let voxel_collider_data = &state.voxel_collider_map.get(
-                (block_id - 1) as usize,
-                Vector3::new(dynamic_pos.x, dynamic_pos.y, dynamic_pos.z),
-            );
+            let voxel_collider_data = &state
+                .voxel_collider_map
+                .get((block_id - 1) as usize, dynamic_pos.clone());
 
             let Some(voxel_collider_data) = &voxel_collider_data else {
                 continue;
             };
 
-            let local_pos = Vector3::<f64>::new(
+            let local_pos = DVec3::new(
                 dynamic_pos.x as f64 + 0.5,
                 dynamic_pos.y as f64 + 0.5,
                 dynamic_pos.z as f64 + 0.5,
             );
-            let local_pos = Vector::new(
+            let local_pos = Vec3::new(
                 (local_pos.x - center_of_mass.x) as Real,
                 (local_pos.y - center_of_mass.y) as Real,
                 (local_pos.z - center_of_mass.z) as Real,
             );
-            let complex = (local_bounds_max - local_bounds_min).sum() < 10;
+            let complex = (local_bounds_max - local_bounds_min).element_sum() < 10;
             if complex {
                 for i in 0..8 {
                     let x = (i & 1) * 2 - 1;
                     let y = ((i >> 1) & 1) * 2 - 1;
                     let z = ((i >> 2) & 1) * 2 - 1;
-                    let local_pos = Vector::new(
+                    let local_pos = Vec3::new(
                         local_pos.x + x as Real * 0.25,
                         local_pos.y + y as Real * 0.25,
                         local_pos.z + z as Real * 0.25,
@@ -147,27 +139,15 @@ pub fn compute_buoyancy(scene: &mut PhysicsScene) {
 fn do_drag(
     body: &mut RigidBody,
     vels: &RigidBodyVelocity<Real>,
-    static_pos: &Vector3<i32>,
-    point: &Vector,
+    static_pos: &IVec3,
+    point: &Vec3,
     size: Real,
     strength: Real,
 ) {
     let point = body.position().transform_point(*point);
 
-    let overlap = Aabb::new(point - Vector::splat(size), point + Vector::splat(size)).intersection(
-        &Aabb::new(
-            Vector::new(
-                static_pos.x as Real,
-                static_pos.y as Real,
-                static_pos.z as Real,
-            ),
-            Vector::new(
-                static_pos.x as Real + 1.0,
-                static_pos.y as Real + 1.0,
-                static_pos.z as Real + 1.0,
-            ),
-        ),
-    );
+    let overlap = Aabb::new(point - size, point + size)
+        .intersection(&Aabb::new(static_pos.as_vec3(), static_pos.as_vec3() + 1.0));
 
     if overlap.is_none() {
         return;
@@ -179,29 +159,22 @@ fn do_drag(
     body.add_force_at_point(-velo * 1.7 * volume * strength, point, false);
 }
 
-fn do_float(
-    body: &mut RigidBody,
-    static_pos: &Vector3<i32>,
-    point: &Vector,
-    size: Real,
-    strength: Real,
-) {
+fn do_float(body: &mut RigidBody, static_pos: &IVec3, point: &Vec3, size: Real, strength: Real) {
     let point = body.position().transform_point(*point);
 
-    let overlap = Aabb::new(point - Vector::splat(size), point + Vector::splat(size)).intersection(
-        &Aabb::new(
-            Vector::new(
+    let overlap =
+        Aabb::new(point - Vec3::splat(size), point + Vec3::splat(size)).intersection(&Aabb::new(
+            Vec3::new(
                 static_pos.x as Real,
                 static_pos.y as Real,
                 static_pos.z as Real,
             ),
-            Vector::new(
+            Vec3::new(
                 static_pos.x as Real + 1.0,
                 static_pos.y as Real + 1.0,
                 static_pos.z as Real + 1.0,
             ),
-        ),
-    );
+        ));
 
     if overlap.is_none() {
         return;
@@ -209,9 +182,5 @@ fn do_float(
 
     let volume = overlap.unwrap().volume();
 
-    body.add_force_at_point(
-        Vector::new(0.0, 10.5 * volume * strength, 0.0),
-        point,
-        false,
-    );
+    body.add_force_at_point(Vec3::new(0.0, 10.5 * volume * strength, 0.0), point, false);
 }

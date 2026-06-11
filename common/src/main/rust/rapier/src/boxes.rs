@@ -5,7 +5,7 @@ use marten::Real;
 use rapier3d::dynamics::RigidBodyBuilder;
 use rapier3d::geometry::{ColliderBuilder, SharedShape};
 use rapier3d::glamx::Quat;
-use rapier3d::math::Vector;
+use rapier3d::math::Vec3;
 
 use crate::get_scene_mut;
 use crate::scene::LevelColliderID;
@@ -34,7 +34,7 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_cre
 
     let mut rigid_body = RigidBodyBuilder::dynamic()
         .ccd_enabled(true)
-        .translation(Vector::new(
+        .translation(Vec3::new(
             pose_arr[0] as Real,
             pose_arr[1] as Real,
             pose_arr[2] as Real,

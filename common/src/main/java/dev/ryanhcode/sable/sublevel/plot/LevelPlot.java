@@ -5,6 +5,7 @@ import dev.ryanhcode.sable.api.block.BlockEntitySubLevelReactionWheel;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
 import dev.ryanhcode.sable.companion.math.BoundingBox3i;
 import dev.ryanhcode.sable.companion.math.BoundingBox3ic;
+import dev.ryanhcode.sable.platform.SableChunkEventPlatform;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.SubLevel;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -179,6 +180,8 @@ public abstract class LevelPlot {
 
         final LevelChunk chunk = new LevelChunk(level, pos, UpgradeData.EMPTY, new LevelChunkTicks<>(), new LevelChunkTicks<>(), 0L, sections, null, null);
         this.newChunk(pos, chunk, true);
+
+        SableChunkEventPlatform.INSTANCE.onPlotChunkLoaded(chunk);
     }
 
 

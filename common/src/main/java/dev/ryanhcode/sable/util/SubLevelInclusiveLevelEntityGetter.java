@@ -1,7 +1,6 @@
 package dev.ryanhcode.sable.util;
 
 import dev.ryanhcode.sable.Sable;
-import dev.ryanhcode.sable.api.SubLevelHelper;
 import dev.ryanhcode.sable.companion.math.BoundingBox3d;
 import dev.ryanhcode.sable.sublevel.SubLevel;
 import net.minecraft.util.AbortableIterationConsumer;
@@ -90,7 +89,7 @@ public class SubLevelInclusiveLevelEntityGetter<T extends EntityAccess> implemen
     }
 
     @Override
-    public <U extends T> void get(final EntityTypeTest<T, U> entityTypeTest, AABB aABB, final AbortableIterationConsumer<U> abortableIterationConsumer) {
+    public <U extends T> void get(final @NotNull EntityTypeTest<T, U> entityTypeTest, AABB aABB, final AbortableIterationConsumer<U> abortableIterationConsumer) {
         if (aABB.getSize() > MAX_GET_SIDE_LENGTH) {
             logError(aABB);
             return;

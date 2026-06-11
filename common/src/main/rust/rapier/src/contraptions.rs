@@ -6,9 +6,8 @@ use jni::sys::{jdouble, jint};
 use marten::Real;
 use rapier3d::dynamics::RigidBodyBuilder;
 use rapier3d::geometry::{ColliderBuilder, SharedShape};
-use rapier3d::glamx::{Pose3, Quat};
-use rapier3d::math::Vector;
-use rapier3d::na::Vector3;
+use rapier3d::glamx::{DVec3, Pose3, Quat};
+use rapier3d::math::Vec3;
 use rapier3d::pipeline::{ActiveEvents, ActiveHooks};
 use rapier3d::prelude::{RigidBodyHandle, RigidBodyVelocity};
 
@@ -119,7 +118,7 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_set
     let center_of_mass_arr = extract_jdouble_array!(env, center_of_mass, 3);
     let pose_arr = extract_jdouble_array!(env, pose, 7);
     let velocities_arr = extract_jdouble_array!(env, velocities, 6);
-    let translation = Vector3::new(
+    let translation = Vec3::new(
         pose_arr[0] as Real,
         pose_arr[1] as Real,
         pose_arr[2] as Real,
@@ -144,7 +143,7 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_set
 
     let isometry = Pose3 {
         rotation: quat,
-        translation: Vector::new(translation.x, translation.y, translation.z),
+        translation,
     };
 
     // if (info.static_mount.is_some()) {
@@ -162,19 +161,19 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_set
     collider.set_position_wrt_parent(isometry);
     // }
 
-    info.center_of_mass = Some(Vector3::new(
+    info.center_of_mass = Some(DVec3::new(
         center_of_mass_arr[0],
         center_of_mass_arr[1],
         center_of_mass_arr[2],
     ));
 
     info.fake_velocities = Some(RigidBodyVelocity::new(
-        Vector::new(
+        Vec3::new(
             velocities_arr[0] as Real,
             velocities_arr[1] as Real,
             velocities_arr[2] as Real,
         ),
-        Vector::new(
+        Vec3::new(
             velocities_arr[3] as Real,
             velocities_arr[4] as Real,
             velocities_arr[5] as Real,

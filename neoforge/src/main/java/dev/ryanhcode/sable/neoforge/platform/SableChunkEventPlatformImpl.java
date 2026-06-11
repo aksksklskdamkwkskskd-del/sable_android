@@ -10,7 +10,7 @@ import org.jetbrains.annotations.ApiStatus;
 public class SableChunkEventPlatformImpl implements SableChunkEventPlatform {
 
     @Override
-    public void onChunkPacketReplaced(final LevelChunk chunk) {
+    public void onClientChunkPacketReplaced(final LevelChunk chunk) {
         NeoForge.EVENT_BUS.post(new ChunkEvent.Load(chunk, false));
     }
 
@@ -18,4 +18,10 @@ public class SableChunkEventPlatformImpl implements SableChunkEventPlatform {
     public void onOldChunkInvalid(final LevelChunk chunk) {
         // no-op
     }
+
+    @Override
+    public void onPlotChunkLoaded(final LevelChunk chunk) {
+        NeoForge.EVENT_BUS.post(new ChunkEvent.Load(chunk, false));
+    }
+
 }

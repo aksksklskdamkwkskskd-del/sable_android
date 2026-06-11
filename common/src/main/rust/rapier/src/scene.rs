@@ -11,8 +11,8 @@ use rapier3d::dynamics::{
     CCDSolver, ImpulseJointSet, IslandManager, MultibodyJointSet, RigidBodyHandle, RigidBodySet,
 };
 use rapier3d::geometry::{ColliderSet, DefaultBroadPhase, NarrowPhase};
-use rapier3d::math::Vector;
-use rapier3d::na::Vector3;
+use rapier3d::glamx::IVec3;
+use rapier3d::math::Vec3;
 use rapier3d::pipeline::PhysicsPipeline;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
@@ -74,7 +74,7 @@ pub struct PhysicsScene {
     pub current_step_vm: Option<JavaVM>,
 
     /// The current gravity vector for all bodies. [m/s^2]
-    pub gravity: Vector,
+    pub gravity: Vec3,
 
     /// Universal linear drag applied to all bodies
     pub universal_drag: Real,
@@ -89,8 +89,8 @@ pub struct SableManifoldInfoMap {
 }
 
 pub struct SableManifoldInfo {
-    pub pos_a: Vector3<i32>,
-    pub pos_b: Vector3<i32>,
+    pub pos_a: IVec3,
+    pub pos_b: IVec3,
     pub col_a: usize,
     pub col_b: usize,
 }

@@ -242,7 +242,7 @@ public class SubLevelHeatMapManager {
             final ServerSubLevel subLevel = SubLevelAssemblyHelper.assembleBlocks((ServerLevel) level, blocks.get(0), blocks, bounds);
 
             // Protect against split sub-levels that have zero mass.
-            if (subLevel.getMassTracker().getCenterOfMass() == null || subLevel.getMassTracker().getMass() <= 0.0) {
+            if (subLevel.getSelfMassTracker().getCenterOfMass() == null || subLevel.getSelfMassTracker().getMass() <= 0.0) {
                 subLevel.getPlot().destroyAllBlocks();
 
                 final SubLevelContainer container = Objects.requireNonNull(SubLevelContainer.getContainer(level));
