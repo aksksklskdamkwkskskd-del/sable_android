@@ -1,12 +1,15 @@
 use crate::collider::LevelCollider;
-use crate::{PHYSICS_STATE, ReportedCollision};
+use crate::scene::ReportedCollisionBuffer;
+use crate::ReportedCollision;
 use rapier3d::dynamics::RigidBodySet;
 use rapier3d::geometry::{ColliderSet, CollisionEvent, ContactPair};
 use rapier3d::pipeline::EventHandler;
 use rapier3d::prelude::*;
+use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct SableEventHandler {
-    pub scene_id: i32,
+    pub reported_collisions: Arc<ReportedCollisionBuffer>,
 }
 
 impl EventHandler for SableEventHandler {
@@ -27,17 +30,11 @@ impl EventHandler for SableEventHandler {
         contact_pair: &ContactPair,
         total_force_magnitude: Real,
     ) {
-        let Some(state) = (unsafe { &mut PHYSICS_STATE }) else {
-            panic!("no physics state!")
-        };
-
-        let Some(scene) = state.scenes.get_mut(&self.scene_id) else {
-            panic!("No scene with given ID!");
-        };
-
         if total_force_magnitude < 0.1 {
             return;
         }
+
+        let mut batch = Vec::new();
 
         for manifold in contact_pair.manifolds.iter() {
             for point in manifold.points.iter() {
@@ -56,7 +53,7 @@ impl EventHandler for SableEventHandler {
                 let local_p1 = point.local_p1;
                 let local_p2 = point.local_p2;
 
-                let collision = ReportedCollision {
+                batch.push(ReportedCollision {
                     body_a: level_collider_a.id,
                     body_b: level_collider_b.id,
                     force_amount: total_force_magnitude as f64,
@@ -64,10 +61,12 @@ impl EventHandler for SableEventHandler {
                     local_normal_b: local_n2.as_dvec3(),
                     local_point_a: local_p1.as_dvec3(),
                     local_point_b: local_p2.as_dvec3(),
-                };
-
-                scene.reported_collisions.push(collision);
+                });
             }
+        }
+
+        if !batch.is_empty() {
+            self.reported_collisions.borrow_mut().extend(batch);
         }
     }
 }

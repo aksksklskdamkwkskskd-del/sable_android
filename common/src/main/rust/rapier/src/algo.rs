@@ -8,8 +8,8 @@ use rapier3d::na::SimdComplexField;
 use rayon::iter::ParallelIterator;
 use rayon::prelude::{IntoParallelRefIterator, ParallelExtend};
 
-use crate::scene::{PhysicsScene, pack_section_pos};
-use crate::{ActiveLevelColliderInfo, get_scene_mut};
+use crate::ActiveLevelColliderInfo;
+use crate::scene::{SableSceneData, pack_section_pos};
 
 pub const DEFAULT_COLLISION_PARALLEL_CUTOFF: usize = 256;
 
@@ -21,6 +21,7 @@ pub fn find_collision_pairs(
     prediction: Real,
     cutoff: usize,
     liquid: bool,
+    sable_data: &SableSceneData,
 ) -> Vec<(IVec3, IVec3)> {
     struct StackObject {
         index: u32,
@@ -79,14 +80,12 @@ pub fn find_collision_pairs(
             let transformed_center = isometry.rotation.mul_vec3(node_center) + translation;
             let radius = node_size as Real / 2.0 * 1.7321 + prediction;
 
-            let scene = get_scene_mut(sable_body.scene_id);
-
             let (has_any_intersections, blocks_opt) = get_overlapping_nodes(
                 other_sable_body,
                 com_offset,
                 transformed_center.into(),
                 radius,
-                scene,
+                sable_data,
                 node >= 0,
                 liquid,
             );
@@ -151,7 +150,7 @@ fn get_overlapping_nodes(
     com_offset: DVec3,
     pos: Vec3,
     dist: Real,
-    scene: &PhysicsScene,
+    sable_data: &SableSceneData,
     cancel_early: bool,
     liquid: bool,
 ) -> (bool, Option<Vec<IVec3>>) {
@@ -223,7 +222,7 @@ fn get_overlapping_nodes(
     for ox in min_octree_pos.x..=max_octree_pos.x {
         for oy in min_octree_pos.y..=max_octree_pos.y {
             for oz in min_octree_pos.z..=max_octree_pos.z {
-                let chunk = scene.octree_chunks.get(&pack_section_pos(ox, oy, oz));
+                let chunk = sable_data.octree_chunks.get(&pack_section_pos(ox, oy, oz));
                 let Some(chunk) = chunk else {
                     continue;
                 };
@@ -239,6 +238,10 @@ fn get_overlapping_nodes(
                 } else {
                     &chunk.octree
                 };
+
+                if chunk_octree.is_empty() {
+                    continue;
+                }
 
                 for x in min_x..=max_x {
                     for y in min_y..=max_y {

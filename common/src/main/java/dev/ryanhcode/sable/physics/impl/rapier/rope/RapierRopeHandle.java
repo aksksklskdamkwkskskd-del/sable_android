@@ -10,9 +10,9 @@ import org.joml.Vector3dc;
 import java.util.List;
 
 @ApiStatus.Internal
-public record RapierRopeHandle(int sceneId, long handle) implements RopeHandle {
+public record RapierRopeHandle(long sceneHandle, long handle) implements RopeHandle {
 
-    public static RapierRopeHandle create(final int sceneId, final double pointRadius, final List<Vector3d> points) {
+    public static RapierRopeHandle create(final long sceneHandle, final double pointRadius, final List<Vector3d> points) {
         final double[] coordinates = new double[points.size() * 3];
 
         for (int i = 0; i < points.size(); i++) {
@@ -22,8 +22,8 @@ public record RapierRopeHandle(int sceneId, long handle) implements RopeHandle {
             coordinates[i * 3 + 2] = point.z;
         }
 
-        final long handle = Rapier3D.createRope(sceneId, pointRadius, points.get(0).distance(points.get(1)), coordinates, points.size());
-        return new RapierRopeHandle(sceneId, handle);
+        final long handle = Rapier3D.createRope(sceneHandle, pointRadius, points.get(0).distance(points.get(1)), coordinates, points.size());
+        return new RapierRopeHandle(sceneHandle, handle);
     }
 
     /**
@@ -31,7 +31,7 @@ public record RapierRopeHandle(int sceneId, long handle) implements RopeHandle {
      */
     @Override
     public void readPose(final List<Vector3d> dest) {
-        final double[] coordinates = Rapier3D.queryRope(this.sceneId, this.handle);
+        final double[] coordinates = Rapier3D.queryRope(this.sceneHandle, this.handle);
         for (int i = 0; i < coordinates.length; i += 3) {
             dest.get(i / 3).set(coordinates[i], coordinates[i + 1], coordinates[i + 2]);
         }
@@ -42,7 +42,7 @@ public record RapierRopeHandle(int sceneId, long handle) implements RopeHandle {
      */
     @Override
     public void remove() {
-        Rapier3D.removeRope(this.sceneId, this.handle);
+        Rapier3D.removeRope(this.sceneHandle, this.handle);
     }
 
     /**
@@ -50,7 +50,7 @@ public record RapierRopeHandle(int sceneId, long handle) implements RopeHandle {
      */
     @Override
     public void setFirstSegmentLength(final double length) {
-        Rapier3D.setRopeFirstSegmentLength(this.sceneId, this.handle, length);
+        Rapier3D.setRopeFirstSegmentLength(this.sceneHandle, this.handle, length);
     }
 
     /**
@@ -58,7 +58,7 @@ public record RapierRopeHandle(int sceneId, long handle) implements RopeHandle {
      */
     @Override
     public void removeFirstPoint() {
-        Rapier3D.removeRopePointAtStart(this.sceneId, this.handle);
+        Rapier3D.removeRopePointAtStart(this.sceneHandle, this.handle);
     }
 
     /**
@@ -66,7 +66,7 @@ public record RapierRopeHandle(int sceneId, long handle) implements RopeHandle {
      */
     @Override
     public void addPoint(final Vector3dc position) {
-        Rapier3D.addRopePointAtStart(this.sceneId, this.handle, position.x(), position.y(), position.z());
+        Rapier3D.addRopePointAtStart(this.sceneHandle, this.handle, position.x(), position.y(), position.z());
     }
 
     /**
@@ -74,7 +74,7 @@ public record RapierRopeHandle(int sceneId, long handle) implements RopeHandle {
      */
     @Override
     public void setAttachment(final AttachmentPoint attachmentPoint, final Vector3dc location, final ServerSubLevel subLevel) {
-        Rapier3D.setRopeAttachment(this.sceneId, this.handle, subLevel == null ? -1 :  Rapier3D.getID(subLevel), location.x(), location.y(), location.z(), attachmentPoint == AttachmentPoint.END);
+        Rapier3D.setRopeAttachment(this.sceneHandle, this.handle, subLevel == null ? -1 :  Rapier3D.getID(subLevel), location.x(), location.y(), location.z(), attachmentPoint == AttachmentPoint.END);
     }
 
     /**
@@ -82,6 +82,6 @@ public record RapierRopeHandle(int sceneId, long handle) implements RopeHandle {
      */
     @Override
     public void wakeUp() {
-        Rapier3D.wakeUpRope(this.sceneId, this.handle);
+        Rapier3D.wakeUpRope(this.sceneHandle, this.handle);
     }
 }

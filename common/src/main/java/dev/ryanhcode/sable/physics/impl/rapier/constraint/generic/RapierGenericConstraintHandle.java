@@ -1,13 +1,15 @@
 package dev.ryanhcode.sable.physics.impl.rapier.constraint.generic;
 
+import dev.ryanhcode.sable.api.physics.PhysicsPipelineBody;
 import dev.ryanhcode.sable.api.physics.constraint.ConstraintJointAxis;
-import dev.ryanhcode.sable.api.physics.constraint.generic.GenericConstraintConfiguration;
-import dev.ryanhcode.sable.api.physics.constraint.generic.GenericConstraintHandle;
+import dev.ryanhcode.sable.api.physics.constraint.GenericConstraintConfiguration;
+import dev.ryanhcode.sable.api.physics.constraint.GenericConstraintHandle;
 import dev.ryanhcode.sable.physics.impl.rapier.Rapier3D;
 import dev.ryanhcode.sable.physics.impl.rapier.constraint.RapierConstraintHandle;
-import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.ApiStatus;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Quaterniondc;
 import org.joml.Vector3dc;
@@ -21,8 +23,9 @@ public class RapierGenericConstraintHandle extends RapierConstraintHandle implem
     /**
      * Creates a rapier constraint handle
      */
-    public static RapierGenericConstraintHandle create(final ServerLevel serverLevel, @Nullable final ServerSubLevel sublevelA, @Nullable final ServerSubLevel sublevelB, final GenericConstraintConfiguration config) {
-        final int sceneID = Rapier3D.getID(serverLevel);
+    @Contract("_, _, _, _ -> new")
+    public static @NotNull RapierGenericConstraintHandle create(final ServerLevel serverLevel, @Nullable final PhysicsPipelineBody bodyA, @Nullable final PhysicsPipelineBody bodyB, final GenericConstraintConfiguration config) {
+        final long sceneHandle = Rapier3D.getSceneHandle(serverLevel);
 
         int lockedAxesMask = 0;
         for (final ConstraintJointAxis axis : config.lockedAxes()) {
@@ -30,9 +33,9 @@ public class RapierGenericConstraintHandle extends RapierConstraintHandle implem
         }
 
         final long handle = Rapier3D.addGenericConstraint(
-                sceneID,
-                sublevelA == null ? -1 : Rapier3D.getID(sublevelA),
-                sublevelB == null ? -1 : Rapier3D.getID(sublevelB),
+                sceneHandle,
+                bodyA == null ? -1 : Rapier3D.getID(bodyA),
+                bodyB == null ? -1 : Rapier3D.getID(bodyB),
                 config.pos1().x(),
                 config.pos1().y(),
                 config.pos1().z(),
@@ -50,34 +53,72 @@ public class RapierGenericConstraintHandle extends RapierConstraintHandle implem
                 lockedAxesMask
         );
 
-        return new RapierGenericConstraintHandle(sceneID, handle);
+        return new RapierGenericConstraintHandle(sceneHandle, handle);
     }
 
     /**
      * Creates a new constraint handle
      *
-     * @param sceneID the scene ID that this constraint is in
+     * @param sceneHandle the scene ID that this constraint is in
      * @param handle the handle from the physics engine
      */
-    public RapierGenericConstraintHandle(final int sceneID, final long handle) {
-        super(sceneID, handle);
+    public RapierGenericConstraintHandle(final long sceneHandle, final long handle) {
+        super(sceneHandle, handle);
     }
 
     @Override
-    public void setFrame1(final Vector3dc localPosition, final Quaterniondc localRotation) {
+    public void setFrame1(final Vector3dc localPosition, final Quaterniondc localOrientation) {
+        this.assertValid();
         Rapier3D.setConstraintFrame(
-                this.sceneID, this.handle, FRAME_SIDE_FIRST,
+                this.sceneHandle, this.handle, FRAME_SIDE_FIRST,
                 localPosition.x(), localPosition.y(), localPosition.z(),
-                localRotation.x(), localRotation.y(), localRotation.z(), localRotation.w()
+                localOrientation.x(), localOrientation.y(), localOrientation.z(), localOrientation.w()
         );
     }
 
     @Override
-    public void setFrame2(final Vector3dc localPosition, final Quaterniondc localRotation) {
+    public void setFrame2(final Vector3dc localPosition, final Quaterniondc localOrientation) {
+        this.assertValid();
         Rapier3D.setConstraintFrame(
-                this.sceneID, this.handle, FRAME_SIDE_SECOND,
+                this.sceneHandle, this.handle, FRAME_SIDE_SECOND,
                 localPosition.x(), localPosition.y(), localPosition.z(),
-                localRotation.x(), localRotation.y(), localRotation.z(), localRotation.w()
+                localOrientation.x(), localOrientation.y(), localOrientation.z(), localOrientation.w()
         );
+    }
+
+    /**
+     * Adds / sets an axis limit on this constraint
+     *
+     * @param axis The axis on which the limit should be placed
+     * @param min  The minimum limit on the constraint axis
+     * @param max  The maximum limit on the constraint axis
+     */
+    @Override
+    public void setLimit(final ConstraintJointAxis axis, final double min, final double max) {
+        this.assertValid();
+        Rapier3D.setConstraintLimit(this.sceneHandle, this.handle, axis.ordinal(), min, max);
+    }
+
+    /**
+     * Locks the given constraint axes on this constraint
+     *
+     * @param axes The axes to lock
+     */
+    @Override
+    public void lockAxes(final ConstraintJointAxis @NotNull... axes) {
+        byte mask = 0;
+
+        for (final ConstraintJointAxis axis : axes) {
+            final byte bit = (byte) (1 << axis.ordinal());
+
+            if ((mask & bit) != 0) {
+                throw new RuntimeException("Duplicate axis: " + axis);
+            }
+
+            mask |= bit;
+        }
+
+        this.assertValid();
+        Rapier3D.lockConstraintAxes(this.sceneHandle, this.handle, mask);
     }
 }

@@ -1,6 +1,7 @@
-package dev.ryanhcode.sable.api.physics.constraint.fixed;
+package dev.ryanhcode.sable.api.physics.constraint;
 
-import dev.ryanhcode.sable.api.physics.constraint.PhysicsConstraintConfiguration;
+import dev.ryanhcode.sable.api.physics.PhysicsPipelineBody;
+import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import org.joml.Quaterniondc;
 import org.joml.Vector3dc;
 
@@ -12,5 +13,10 @@ import org.joml.Vector3dc;
  * @param orientation the local orientation of the second body from the first. Motor axes will be relative to this frame
  */
 public record FixedConstraintConfiguration(Vector3dc pos1, Vector3dc pos2, Quaterniondc orientation) implements PhysicsConstraintConfiguration<FixedConstraintHandle> {
+
+    @Override
+    public void validate(final ServerSubLevelContainer container, final PhysicsPipelineBody bodyA, final PhysicsPipelineBody bodyB) {
+        PhysicsConstraintConfiguration.validateAnchors(container, bodyA, bodyB, this.pos1, this.pos2);
+    }
 
 }

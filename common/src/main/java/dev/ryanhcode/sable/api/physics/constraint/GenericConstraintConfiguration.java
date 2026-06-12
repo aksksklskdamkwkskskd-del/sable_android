@@ -1,7 +1,7 @@
-package dev.ryanhcode.sable.api.physics.constraint.generic;
+package dev.ryanhcode.sable.api.physics.constraint;
 
-import dev.ryanhcode.sable.api.physics.constraint.ConstraintJointAxis;
-import dev.ryanhcode.sable.api.physics.constraint.PhysicsConstraintConfiguration;
+import dev.ryanhcode.sable.api.physics.PhysicsPipelineBody;
+import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import org.joml.Quaterniondc;
 import org.joml.Vector3dc;
 
@@ -29,4 +29,10 @@ public record GenericConstraintConfiguration(
     public GenericConstraintConfiguration(final Vector3dc pos1, final Vector3dc pos2, final Quaterniondc orientation1, final Quaterniondc orientation2) {
         this(pos1, pos2, orientation1, orientation2, EnumSet.noneOf(ConstraintJointAxis.class));
     }
+
+    @Override
+    public void validate(final ServerSubLevelContainer container, final PhysicsPipelineBody bodyA, final PhysicsPipelineBody bodyB) {
+        PhysicsConstraintConfiguration.validateAnchors(container, bodyA, bodyB, this.pos1, this.pos2);
+    }
+
 }

@@ -1,20 +1,20 @@
 use jni::JNIEnv;
 use jni::objects::{JClass, JDoubleArray};
-use jni::sys::{jdouble, jint};
+use jni::sys::{jdouble, jint, jlong};
 use marten::Real;
 use rapier3d::dynamics::RigidBodyBuilder;
 use rapier3d::geometry::{ColliderBuilder, SharedShape};
 use rapier3d::glamx::Quat;
 use rapier3d::math::Vec3;
 
-use crate::get_scene_mut;
 use crate::scene::LevelColliderID;
+use crate::with_handle;
 
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_createBox<'local>(
     env: JNIEnv<'local>,
     _class: JClass<'local>,
-    scene_id: jint,
+    handle: jlong,
     id: jint,
     mass: jdouble,
     half_extent_x: jdouble,
@@ -42,44 +42,55 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_cre
         .build();
     rigid_body.set_rotation(quat, false);
 
-    let scene = get_scene_mut(scene_id);
+    with_handle(handle, |scene| {
+        let mut sim_data = scene.sim_data.write().unwrap();
+        let sim_data = &mut *sim_data;
+        let mut sable_data = scene.sable_data.write().unwrap();
 
-    let handle = scene.rigid_body_set.insert(rigid_body);
+        let handle = sim_data.rigid_body_set.insert(rigid_body);
 
-    // make a level collider
-    let collider = ColliderBuilder::new(SharedShape::cuboid(
-        half_extent_x as Real,
-        half_extent_y as Real,
-        half_extent_z as Real,
-    ))
-    .mass(mass as Real)
-    .friction(0.45)
-    .build();
+        // make a level collider
+        let collider = ColliderBuilder::new(SharedShape::cuboid(
+            half_extent_x as Real,
+            half_extent_y as Real,
+            half_extent_z as Real,
+        ))
+        .mass(mass as Real)
+        .friction(0.45)
+        .build();
 
-    scene
-        .collider_set
-        .insert_with_parent(collider, handle, &mut scene.rigid_body_set);
+        sim_data
+            .collider_set
+            .insert_with_parent(collider, handle, &mut sim_data.rigid_body_set);
 
-    scene.rigid_bodies.insert(id as LevelColliderID, handle);
+        sable_data
+            .rigid_bodies
+            .insert(id as LevelColliderID, handle);
+    })
 }
 
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_removeBox<'local>(
     _env: JNIEnv<'local>,
     _class: JClass<'local>,
-    scene_id: jint,
+    handle: jlong,
     id: jint,
 ) {
-    let scene = get_scene_mut(scene_id);
-    let handle = scene.rigid_bodies[&(id as LevelColliderID)];
-    scene.rigid_body_set.remove(
-        handle,
-        &mut scene.island_manager,
-        &mut scene.collider_set,
-        &mut scene.impulse_joint_set,
-        &mut scene.multibody_joint_set,
-        true,
-    );
+    with_handle(handle, |scene| {
+        let mut sim_data = scene.sim_data.write().unwrap();
+        let sim_data = &mut *sim_data;
+        let mut sable_data = scene.sable_data.write().unwrap();
 
-    scene.rigid_bodies.remove(&(id as LevelColliderID));
+        let handle = sable_data.rigid_bodies[&(id as LevelColliderID)];
+        sim_data.rigid_body_set.remove(
+            handle,
+            &mut sim_data.island_manager,
+            &mut sim_data.collider_set,
+            &mut sim_data.impulse_joint_set,
+            &mut sim_data.multibody_joint_set,
+            true,
+        );
+
+        sable_data.rigid_bodies.remove(&(id as LevelColliderID));
+    })
 }

@@ -1,9 +1,9 @@
 package dev.ryanhcode.sable.api.physics.mass;
 
-import dev.ryanhcode.sable.companion.math.Pose3d;
 import dev.ryanhcode.sable.api.sublevel.KinematicContraption;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
+import dev.ryanhcode.sable.companion.math.Pose3d;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
 import dev.ryanhcode.sable.util.SableMathUtils;
@@ -76,7 +76,9 @@ public class MergedMassTracker implements MassData {
         final Vector3d localShift = this.centerOfMass.sub(this.selfTracker.getCenterOfMass(), new Vector3d());
 
         // nudge inertia tensor
-        SableMathUtils.fmaInertiaTensor(localShift, this.selfTracker.getMass(), this.inertiaTensor);
+        if (localShift.lengthSquared() > 0.0) {
+            SableMathUtils.fmaInertiaTensor(localShift, this.selfTracker.getMass(), this.inertiaTensor);
+        }
 
         for (final KinematicContraption contraption : contraptions) {
             final MassTracker contraptionMassData = contraption.sable$getMassTracker();

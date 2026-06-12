@@ -1,11 +1,12 @@
 package dev.ryanhcode.sable.physics.impl.rapier;
 
 import dev.ryanhcode.sable.Sable;
+import dev.ryanhcode.sable.api.physics.PhysicsPipeline;
 import dev.ryanhcode.sable.api.physics.PhysicsPipelineBody;
 import dev.ryanhcode.sable.api.physics.callback.BlockSubLevelCollisionCallback;
 import dev.ryanhcode.sable.api.physics.mass.MassData;
-import dev.ryanhcode.sable.mixinterface.physics.ServerLevelSceneExtension;
 import dev.ryanhcode.sable.physics.impl.rapier.collider.RapierVoxelColliderData;
+import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
 import net.jpountz.lz4.LZ4FrameInputStream;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
@@ -28,16 +29,16 @@ import java.util.zip.ZipInputStream;
 
 /**
  * Java side of the sable_rapier bridge for using the Rapier 3D physics engine.
+ * This is purely for internal use. Use {@link dev.ryanhcode.sable.api.physics.PhysicsPipeline} for interacting with the physics engine.
  */
 @ApiStatus.Internal
-public class Rapier3D {
-
+public final class Rapier3D {
     private static final String NATIVE_DIR = ".sable/natives";
+    private static final String LIB_ZIP_NAME = "sable_rapier_binaries.zip.l4z";
     private static final String LIB_NAME = "sable_rapier";
 
     public static final String NATIVE_NAME = getNativeName();
 
-    private static int countingSceneID = 0;
     private static int countingObjectID = 0;
 
     static {
@@ -66,9 +67,9 @@ public class Rapier3D {
     }
 
     private static void loadLibrary() {
-        try (final InputStream is = Rapier3D.class.getResourceAsStream("/natives/" + LIB_NAME + "/sable_rapier_binaries.zip.l4z")) {
+        try (final InputStream is = Rapier3D.class.getResourceAsStream("/natives/" + LIB_NAME + "/" + LIB_ZIP_NAME)) {
             if (is == null) {
-                throw new FileNotFoundException("sable_rapier_binaries.zip.l4z");
+                throw new FileNotFoundException(LIB_ZIP_NAME);
             }
 
             final Path dir = Paths.get(NATIVE_DIR);
@@ -107,7 +108,7 @@ public class Rapier3D {
     }
 
     /**
-     * Retrieves the body ID for a given server sub level
+     * Retrieves the body ID for a given server sub-level
      *
      * @return the ID
      */
@@ -121,34 +122,25 @@ public class Rapier3D {
         return countingObjectID++;
     }
 
-    /**
-     * Retrieves the dimension / scene ID for a given server level
-     *
-     * @return the dimension ID
-     */
     @ApiStatus.Internal
-    public static synchronized int getID(final ServerLevel level) {
-        if (!(level instanceof final ServerLevelSceneExtension extension)) {
-            throw new IllegalArgumentException("ServerLevel must implement ServerLevelSceneExtension to be used with Rapier");
+    public static long getSceneHandle(final ServerLevel level) {
+        final PhysicsPipeline pipeline = SubLevelPhysicsSystem.require(level).getPipeline();
+
+        if (!(pipeline instanceof final RapierPhysicsPipeline rapierPipeline)) {
+            throw new IllegalStateException("ServerLevel does not use the Rapier physics pipeline");
         }
 
-        if (extension.sable$getSceneID() == -1) {
-            extension.sable$setSceneID(countingSceneID++);
-            Sable.LOGGER.info("Assigned physics scene ID {} to {}", extension.sable$getSceneID(), level.dimension().location());
-        }
-
-        return extension.sable$getSceneID();
+        return rapierPipeline.getSceneHandle();
     }
 
     @ApiStatus.Internal
-    public static native void initialize(final int dimensionID, double gravityX, double gravityY, double gravityZ, double universalDrag);
+    static native long initialize(double gravityX, double gravityY, double gravityZ, double universalDrag);
 
     @ApiStatus.Internal
-    public static native void tick(final int dimensionID, double timeStep);
-
+    static native void tick(final long sceneHandle, double timeStep);
 
     @ApiStatus.Internal
-    public static native void step(final int dimensionID, double timeStep);
+    static native void step(final long sceneHandle, double timeStep);
 
     /**
      * All poses are formatted in a double array as:
@@ -156,27 +148,27 @@ public class Rapier3D {
      */
 
     @ApiStatus.Internal
-    public static native void createSubLevel(final int dimensionID, int id, double[] pose);
+    static native void createSubLevel(final long sceneHandle, int id, double[] pose);
 
     /**
      * Removes an object from the physics world.
      */
     @ApiStatus.Internal
-    public static native void removeSubLevel(final int dimensionID, int id);
+    static native void removeSubLevel(final long sceneHandle, int id);
 
     /**
      * All poses are formatted in a double array as:
      * [x, y, z, qx, qy, qz, qw]
      */
     @ApiStatus.Internal
-    public static native void createBox(final int dimensionID, int id, double mass, double halfExtentsX, double halfExtentsY, double halfExtentsZ, double[] pose);
+    public static native void createBox(final long sceneHandle, int id, double mass, double halfExtentsX, double halfExtentsY, double halfExtentsZ, double[] pose);
 
     /**
      * All poses are formatted in a double array as:
      * [x, y, z, qx, qy, qz, qw]
      */
     @ApiStatus.Internal
-    public static native void removeBox(final int dimensionID, int id);
+    public static native void removeBox(final long sceneHandle, int id);
 
     /**
      * Gets the pose of an object.
@@ -185,7 +177,7 @@ public class Rapier3D {
      * @param store The array to store pose of the object in the format [x, y, z, qx, qy, qz, qw]
      */
     @ApiStatus.Internal
-    public static native void getPose(final int dimensionID, int id, double[] store);
+    public static native void getPose(final long sceneHandle, int id, double[] store);
 
     /**
      * Sets the center of mass in block coordinates.
@@ -196,7 +188,7 @@ public class Rapier3D {
      * @param z  the z position of the center of mass
      */
     @ApiStatus.Internal
-    public static native void setCenterOfMass(final int dimensionID, int id, double x, double y, double z);
+    static native void setCenterOfMass(final long sceneHandle, int id, double x, double y, double z);
 
     /**
      * Sets the local block bounds of an object.
@@ -210,7 +202,7 @@ public class Rapier3D {
      * @param maxZ the maximum z bound (inclusive)
      */
     @ApiStatus.Internal
-    public static native void setLocalBounds(final int dimensionID, int id, int minX, int minY, int minZ, int maxX, int maxY, int maxZ);
+    static native void setLocalBounds(final long sceneHandle, int id, int minX, int minY, int minZ, int maxX, int maxY, int maxZ);
 
     /**
      * Sets a chunk at given chunk coordinates.
@@ -223,7 +215,7 @@ public class Rapier3D {
      * @param id     the object ID the chunk is in, if not global
      */
     @ApiStatus.Internal
-    public static native void addChunk(final int dimensionID, int x, int y, int z, int[] chunk, boolean global, int id);
+    static native void addChunk(final long sceneHandle, int x, int y, int z, int[] chunk, boolean global, int id);
 
     /**
      * Removes a chunk at given chunk coordinates.
@@ -234,7 +226,7 @@ public class Rapier3D {
      * @param global if the chunk is a part of the global world
      */
     @ApiStatus.Internal
-    public static native void removeChunk(final int dimensionID, int x, int y, int z, boolean global);
+    static native void removeChunk(final long sceneHandle, int x, int y, int z, boolean global);
 
     /**
      * Sets a block if it is inside a tracked chunk.
@@ -245,7 +237,7 @@ public class Rapier3D {
      * @param newState the new physics block ID + 1 of the block, or 0 for empty
      */
     @ApiStatus.Internal
-    public static native void changeBlock(final int dimensionID, int x, int y, int z, int newState);
+    public static native void changeBlock(final long sceneHandle, int x, int y, int z, int newState);
 
     /**
      * Adds a new voxel collider data entry.
@@ -256,7 +248,7 @@ public class Rapier3D {
      * @return the ID of the new block collider data entry
      */
     @ApiStatus.Internal
-    protected static native int newVoxelCollider(double frictionMultiplier, double volume, double restitution, boolean isFluid, BlockSubLevelCollisionCallback contactEvents);
+    private static native int newVoxelCollider(double frictionMultiplier, double volume, double restitution, boolean isFluid, BlockSubLevelCollisionCallback contactEvents);
 
     /**
      * Adds a new box to a voxel collider data entry.
@@ -281,7 +273,7 @@ public class Rapier3D {
      * @param index the ID of the physics object
      */
     @ApiStatus.Internal
-    protected static native void setMassProperties(final int dimensionID, int index, double mass, double[] centerOfMass, double[] inertiaTensor);
+    private static native void setMassProperties(final long sceneHandle, int index, double mass, double[] centerOfMass, double[] inertiaTensor);
 
     /**
      * Allocates a new block physics data entry
@@ -305,7 +297,7 @@ public class Rapier3D {
      * @param z  the new z position
      */
     @ApiStatus.Internal
-    public static native void teleportObject(final int dimensionID, int id, double x, double y, double z, double i, double j, double k, double r);
+    static native void teleportObject(final long sceneHandle, int id, double x, double y, double z, double i, double j, double k, double r);
 
     /**
      * "Wakes up" an object, indicating environmental or other changes have occurred that should resume physics if idled or sleeping
@@ -313,7 +305,7 @@ public class Rapier3D {
      * @param id the object ID
      */
     @ApiStatus.Internal
-    public static native void wakeUpObject(final int dimensionID, int id);
+    public static native void wakeUpObject(final long sceneHandle, int id);
 
     /**
      * Adds a rotational constraint between two objects.
@@ -334,7 +326,7 @@ public class Rapier3D {
      * @param localAxisZB   the local axis Z on the second object
      */
     @ApiStatus.Internal
-    public static native long addRotaryConstraint(final int dimensionID,
+    public static native long addRotaryConstraint(final long sceneHandle,
                                                   int id,
                                                   int otherId,
                                                   double localAnchorXA,
@@ -367,7 +359,7 @@ public class Rapier3D {
      * @param localOrientationWB the local orientation W of the second object relative to the first
      */
     @ApiStatus.Internal
-    public static native long addFixedConstraint(final int dimensionID,
+    public static native long addFixedConstraint(final long sceneHandle,
                                                  int id,
                                                  int otherId,
                                                  double localAnchorXA,
@@ -388,7 +380,7 @@ public class Rapier3D {
      * @param otherId the other object ID
      */
     @ApiStatus.Internal
-    public static native long addFreeConstraint(final int dimensionID,
+    public static native long addFreeConstraint(final long sceneHandle,
                                                 int id,
                                                 int otherId,
                                                 double localAnchorXA,
@@ -424,7 +416,7 @@ public class Rapier3D {
      * @param lockedAxesMask     bit mask of locked axes; bit {@code n} corresponds to {@link dev.ryanhcode.sable.api.physics.constraint.ConstraintJointAxis#ordinal()}
      */
     @ApiStatus.Internal
-    public static native long addGenericConstraint(final int dimensionID,
+    public static native long addGenericConstraint(final long sceneHandle,
                                                    int id,
                                                    int otherId,
                                                    double localAnchorXA,
@@ -450,7 +442,7 @@ public class Rapier3D {
      * @param side   {@code 0} for the first body, {@code 1} for the second body
      */
     @ApiStatus.Internal
-    public static native void setConstraintFrame(final int dimensionID, long handle, int side, double localPosX, double localPosY, double localPosZ, double localOrientationX, double localOrientationY, double localOrientationZ, double localOrientationW);
+    public static native void setConstraintFrame(final long sceneHandle, long handle, int side, double localPosX, double localPosY, double localPosZ, double localOrientationX, double localOrientationY, double localOrientationZ, double localOrientationW);
 
     /**
      * Sets if contacts are enabled between the two bodies in the constraint
@@ -458,7 +450,7 @@ public class Rapier3D {
      * @param handle the handle of the constraint
      */
     @ApiStatus.Internal
-    public static native void setConstraintContactsEnabled(final int dimensionID, long handle, boolean contactsEnabled);
+    public static native void setConstraintContactsEnabled(final long sceneHandle, long handle, boolean contactsEnabled);
 
     /**
      * Gets the latest joint impulses
@@ -466,7 +458,7 @@ public class Rapier3D {
      * @param handle the handle of the constraint
      */
     @ApiStatus.Internal
-    public static native void getConstraintImpulses(final int dimensionID, long handle, final double[] store);
+    public static native void getConstraintImpulses(final long sceneHandle, long handle, final double[] store);
 
     /**
      * Checks if a constraint is valid
@@ -474,7 +466,7 @@ public class Rapier3D {
      * @param handle the handle of the constraint
      */
     @ApiStatus.Internal
-    public static native boolean isConstraintValid(final int dimensionID, long handle);
+    public static native boolean isConstraintValid(final long sceneHandle, long handle);
 
     /**
      * Removes a constraint with a handle
@@ -482,17 +474,26 @@ public class Rapier3D {
      * @param handle the handle of the constraint
      */
     @ApiStatus.Internal
-    public static native void removeConstraint(final int dimensionID, long handle);
+    public static native void removeConstraint(final long sceneHandle, long handle);
 
 
     /**
-     * Sets a constraint to a servo, with a desired angle and PD controller coefficients.
-     *
-     * @param dimensionID the ID of the dimension
-     * @param handle      the handle of the constraint
+     * Sets a constraint motor, with a desired angle and PD controller coefficients.
      */
     @ApiStatus.Internal
-    public static native void setConstraintMotor(final int dimensionID, long handle, int axis, double desiredPosition, double stiffness, double damping, boolean hasForceLimit, double maxForce);
+    public static native void setConstraintMotor(final long sceneHandle, long handle, int axis, double desiredPosition, double stiffness, double damping, boolean hasForceLimit, double maxForce);
+
+    /**
+     * Sets a constraint limit, with an axis and min/max
+     */
+    @ApiStatus.Internal
+    public static native void setConstraintLimit(final long sceneHandle, long handle, int axis, double min, double max);
+
+    /**
+     * Locks the given constraint axes on a constraint
+     */
+    @ApiStatus.Internal
+    public static native void lockConstraintAxes(final long sceneHandle, long handle, byte mask);
 
     /**
      * Adds linear and angular velocities
@@ -506,7 +507,7 @@ public class Rapier3D {
      * @param angularZ z component of the angular velocity to add [rad/s]
      */
     @ApiStatus.Internal
-    public static native void addLinearAngularVelocities(final int dimensionID, int bodyId, double linearX, double linearY, double linearZ, double angularX, double angularY, double angularZ, final boolean wakeUp);
+    public static native void addLinearAngularVelocities(final long sceneHandle, int bodyId, double linearX, double linearY, double linearZ, double angularX, double angularY, double angularZ, final boolean wakeUp);
 
     /**
      * Reads & clears all reported collisions from the physics engine.
@@ -515,7 +516,7 @@ public class Rapier3D {
      * [body_a, body_b, force_amount, local_normal_a, local_normal_b, local_point_a, local_point_b]
      */
     @ApiStatus.Internal
-    public static native double[] clearCollisions(int dimensionID);
+    static native double[] clearCollisions(long sceneHandle);
 
     /**
      * Applies a force to a given body
@@ -529,7 +530,7 @@ public class Rapier3D {
      * @param fz     the z component of the force to apply [N]
      */
     @ApiStatus.Internal
-    public static native void applyForce(final int dimensionID, final int bodyID, final double x, final double y, final double z, final double fx, final double fy, final double fz, final boolean wakeUp);
+    static native void applyForce(final long sceneHandle, final int bodyID, final double x, final double y, final double z, final double fx, final double fy, final double fz, final boolean wakeUp);
 
     /**
      * Applies a force to a given body
@@ -543,7 +544,7 @@ public class Rapier3D {
      * @param tz     the z component of the torque to apply [Nm]
      */
     @ApiStatus.Internal
-    public static native void applyForceAndTorque(final int dimensionID, final int bodyID, final double fx, final double fy, final double fz, final double tx, final double ty, final double tz, final boolean wakeUp);
+    static native void applyForceAndTorque(final long sceneHandle, final int bodyID, final double fx, final double fy, final double fz, final double tx, final double ty, final double tz, final boolean wakeUp);
 
     /**
      * Gets the linear velocity of a given body
@@ -552,7 +553,7 @@ public class Rapier3D {
      * @param store  The array to store the linear velocity of the body in the format [x, y, z]
      */
     @ApiStatus.Internal
-    public static native void getLinearVelocity(final int dimensionID, final int bodyID, final double[] store);
+    static native void getLinearVelocity(final long sceneHandle, final int bodyID, final double[] store);
 
     /**
      * Gets the angular velocity of a given body
@@ -561,42 +562,38 @@ public class Rapier3D {
      * @param store  The array to store the angular velocity of the body in the format [x, y, z]
      */
     @ApiStatus.Internal
-    public static native void getAngularVelocity(final int dimensionID, final int bodyID, final double[] store);
+    static native void getAngularVelocity(final long sceneHandle, final int bodyID, final double[] store);
 
     /**
      * Creates a kinematic sub-level within a scene.
      *
-     * @param sceneId the scene ID
      * @param mountId the mount rigid body ID (or -1 for ground)
      * @param id      the kinematic sub-level ID
      * @param pose    a 7-long double array, formatted [x, y, z, qx, qy, qz, qw] for position and quaternion
      */
     @ApiStatus.Internal
-    public static native void createKinematicContraption(final int sceneId, int mountId, int id, double[] pose);
+    static native void createKinematicContraption(final long sceneHandle, int mountId, int id, double[] pose);
 
     /**
      * Removes a kinematic sub-level from a scene.
      *
-     * @param sceneId the scene ID
      * @param id      the kinematic sub-level ID to remove
      */
     @ApiStatus.Internal
-    public static native void removeKinematicContraption(final int sceneId, int id);
+    static native void removeKinematicContraption(final long sceneHandle, int id);
 
     /**
      * Sets the transform (position/quaternion) of a kinematic sub-level's center of mass relative to its parent.
      *
-     * @param sceneId the scene ID
      * @param id      the kinematic sub-level ID
      * @param pose    a 7-long double array, formatted [x, y, z, qx, qy, qz, qw] for position and quaternion
      */
     @ApiStatus.Internal
-    public static native void setKinematicContraptionTransform(final int sceneId, int id, double[] centerOfMass, double[] pose, double[] velocities);
+    static native void setKinematicContraptionTransform(final long sceneHandle, int id, double[] centerOfMass, double[] pose, double[] velocities);
 
     /**
      * Adds a chunk to a kinematic sub-level (4096 blocks, each as packed int).
      *
-     * @param sceneId the scene ID
      * @param id      the kinematic sub-level ID
      * @param x       the chunk x coordinate
      * @param y       the chunk y coordinate
@@ -604,7 +601,7 @@ public class Rapier3D {
      * @param data    a 4096-long int array containing packed block data (block_collider_id << 16 | voxel_state_id)
      */
     @ApiStatus.Internal
-    public static native void addKinematicContraptionChunkSection(final int sceneId, int id, int x, int y, int z, int[] data);
+    static native void addKinematicContraptionChunkSection(final long sceneHandle, int id, int x, int y, int z, int[] data);
 
     /**
      * Creates a rope
@@ -612,7 +609,7 @@ public class Rapier3D {
      * @return a rope id
      */
     @ApiStatus.Internal
-    public static native long createRope(final int dimensionID, final double pointRadius, final double firstJointLength, final double[] points, final int pointCount);
+    public static native long createRope(final long sceneHandle, final double pointRadius, final double firstJointLength, final double[] points, final int pointCount);
 
     /**
      * Removes a rope
@@ -620,23 +617,22 @@ public class Rapier3D {
      * @param ropeId a rope id
      */
     @ApiStatus.Internal
-    public static native long removeRope(final int dimensionID, final long ropeId);
+    public static native long removeRope(final long sceneHandle, final long ropeId);
 
     @ApiStatus.Internal
-    public static native void setRopeAttachment(final int dimensionID, final long ropeId, final int subLevelId, final double x, final double y, final double z, final boolean end);
+    public static native void setRopeAttachment(final long sceneHandle, final long ropeId, final int subLevelId, final double x, final double y, final double z, final boolean end);
 
     @ApiStatus.Internal
-    public static native void addRopePointAtStart(final int dimensionID, final long ropeId, final double x, final double y, final double z);
+    public static native void addRopePointAtStart(final long sceneHandle, final long ropeId, final double x, final double y, final double z);
 
     @ApiStatus.Internal
-    public static native void removeRopePointAtStart(final int dimensionID, final long ropeId);
+    public static native void removeRopePointAtStart(final long sceneHandle, final long ropeId);
 
     @ApiStatus.Internal
-    public static native void wakeUpRope(final int dimensionID, final long ropeId);
+    public static native void wakeUpRope(final long sceneHandle, final long ropeId);
 
     @ApiStatus.Internal
-    public static native void setRopeFirstSegmentLength(final int dimensionID, final long ropeId, final double firstSegmentLength);
-
+    public static native void setRopeFirstSegmentLength(final long sceneHandle, final long ropeId, final double firstSegmentLength);
 
     /**
      * Queries a rope
@@ -644,24 +640,24 @@ public class Rapier3D {
      * @param ropeId a rope id
      */
     @ApiStatus.Internal
-    public static native double[] queryRope(final int dimensionID, final long ropeId);
+    public static native double[] queryRope(final long sceneHandle, final long ropeId);
 
     @ApiStatus.Internal
-    public static native void configFrequencyAndDamping(
+    static native void configFrequencyAndDamping(
             double contactNaturalFrequency,
             double contactDampingRatio);
 
     @ApiStatus.Internal
-    public static native void configSolverIterations(int solverIterations, int pgsIterations, int stabilizationIterations);
+    static native void configSolverIterations(int solverIterations, int pgsIterations, int stabilizationIterations);
 
     @ApiStatus.Internal
-    public static native void configMinIslandSize(int islandSize);
+    static native void configMinIslandSize(int islandSize);
 
     @ApiStatus.Internal
-    public static native void dispose(int sceneId);
+    static native void dispose(long sceneHandle);
 
     @ApiStatus.Internal
-    public static void setMassPropertiesFrom(final int dimensionID, final int id, final MassData massTracker) {
+    static void setMassPropertiesFrom(final long sceneHandle, final int id, final MassData massTracker) {
         final Matrix3dc inertiaTensor = massTracker.getInertiaTensor();
         final Vector3dc centerOfMass = massTracker.getCenterOfMass();
         final double mass = massTracker.getMass();
@@ -675,6 +671,6 @@ public class Rapier3D {
                 inertiaTensor.m20(), inertiaTensor.m21(), inertiaTensor.m22()
         };
 
-        Rapier3D.setMassProperties(dimensionID, id, mass, centerOfMassArray, inertiaTensorArray);
+        Rapier3D.setMassProperties(sceneHandle, id, mass, centerOfMassArray, inertiaTensorArray);
     }
 }

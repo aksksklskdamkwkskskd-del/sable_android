@@ -1,12 +1,9 @@
-package dev.ryanhcode.sable.api.physics.constraint.rotary;
-
-import dev.ryanhcode.sable.api.physics.constraint.ConstraintJointAxis;
-import dev.ryanhcode.sable.api.physics.constraint.PhysicsConstraintHandle;
+package dev.ryanhcode.sable.api.physics.constraint;
 
 /**
  * A constraint handle for a rotary / motor constraint between two bodies
  */
-public interface RotaryConstraintHandle extends PhysicsConstraintHandle {
+public non-sealed interface RotaryConstraintHandle extends PhysicsConstraintHandle {
 
     ConstraintJointAxis DEFAULT_AXIS = ConstraintJointAxis.ANGULAR_X;
 

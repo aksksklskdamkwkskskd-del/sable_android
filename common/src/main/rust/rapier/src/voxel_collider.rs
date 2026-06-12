@@ -52,7 +52,7 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_new
     contact_events: JObject,
     dynamic: jboolean,
 ) -> jint {
-    let state = unsafe { get_physics_state_mut() };
+    let mut state = get_physics_state_mut();
 
     let next_index = state.voxel_collider_map.voxel_colliders.len();
 
@@ -69,7 +69,7 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_new
             env.get_method_id(
                 class,
                 String::from("onCollision"),
-                String::from("(IIIDDDD)[D"),
+                String::from("(IIIIIIDDDDZ)[D"),
             )
             .unwrap(),
         );
@@ -104,7 +104,7 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_add
     index: jint,
     box_bounds: JDoubleArray<'local>,
 ) {
-    let state = unsafe { get_physics_state_mut() };
+    let mut state = get_physics_state_mut();
 
     let mut bounds: [jdouble; 6] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
     env.get_double_array_region(box_bounds, 0, &mut bounds)
@@ -130,7 +130,7 @@ pub extern "system" fn Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_cle
     _class: JClass<'local>,
     index: jint,
 ) {
-    let state = unsafe { get_physics_state_mut() };
+    let mut state = get_physics_state_mut();
 
     if let Some(data) = &mut state.voxel_collider_map.voxel_colliders[index as usize] {
         data.collision_boxes.clear()

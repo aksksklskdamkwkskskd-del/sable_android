@@ -70,14 +70,32 @@ public class SubLevelAssemblyHelper {
         final ServerSubLevelContainer container = SubLevelContainer.getContainer(level);
         assert container != null;
 
+        final SubLevelPhysicsSystem physicsSystem = container.physicsSystem();
         final SubLevel containingSubLevel = Sable.HELPER.getContaining(level, anchor);
         final Pose3d pose = new Pose3d();
 
         pose.position().set(anchor.getX() + 0.5, anchor.getY() + 0.5, anchor.getZ() + 0.5);
+
+        final Vector3d containingAngularVelocity = new Vector3d();
+        final Vector3d containingLinearVelocity = new Vector3d();
+        final Pose3d containingPose;
+
         if (containingSubLevel != null) {
-            final Pose3d containingPose = containingSubLevel.logicalPose();
+            if (containingSubLevel.isRemoved()) {
+                throw new RuntimeException("Sub-level assembly attempted inside plot of already removed sub-level");
+            }
+
+            containingPose = new Pose3d(containingSubLevel.logicalPose());
+
             containingPose.transformPosition(pose.position());
             pose.orientation().set(containingPose.orientation());
+
+            final RigidBodyHandle containingHandle = physicsSystem.getPhysicsHandle((ServerSubLevel) containingSubLevel);
+
+            containingHandle.getLinearVelocity(containingLinearVelocity);
+            containingHandle.getAngularVelocity(containingAngularVelocity);
+        } else {
+            containingPose = null;
         }
 
         final ServerSubLevel subLevel = (ServerSubLevel) container.allocateNewSubLevel(pose);
@@ -104,11 +122,10 @@ public class SubLevelAssemblyHelper {
 
         subLevel.logicalPose().position().set(subLevelCenter.x, subLevelCenter.y, subLevelCenter.z);
 
-        final SubLevelPhysicsSystem physicsSystem = container.physicsSystem();
         final PhysicsPipeline pipeline = physicsSystem.getPipeline();
 
         if (containingSubLevel != null) {
-            kickFromContainingSubLevel(level, physicsSystem, pipeline, subLevel, containingSubLevel);
+            kickFromContainingSubLevel(pipeline, subLevel, containingLinearVelocity, containingAngularVelocity, containingPose, !containingSubLevel.isRemoved() ? containingSubLevel : null);
         }
 
         pipeline.teleport(subLevel, subLevel.logicalPose().position(), subLevel.logicalPose().orientation());
@@ -125,18 +142,35 @@ public class SubLevelAssemblyHelper {
                                                   final PhysicsPipeline pipeline,
                                                   final ServerSubLevel subLevel,
                                                   final SubLevel containingSubLevel) {
+
+        final RigidBodyHandle containingHandle = physicsSystem.getPhysicsHandle((ServerSubLevel) containingSubLevel);
+        final Vector3d linearVelocity = containingHandle.getLinearVelocity(new Vector3d());
+        final Vector3d angularVelocity = containingHandle.getAngularVelocity(new Vector3d());
+        final Pose3d containingPose = containingSubLevel.logicalPose();
+
+        kickFromContainingSubLevel(pipeline, subLevel, linearVelocity, angularVelocity, containingPose, containingSubLevel);
+    }
+
+    @ApiStatus.Internal
+    private static void kickFromContainingSubLevel(final PhysicsPipeline pipeline,
+                                                   final ServerSubLevel subLevel,
+                                                   final Vector3d containingLinearVelocity,
+                                                   final Vector3d containingAngularVelocity,
+                                                   final Pose3d containingPose,
+                                                   @Nullable final SubLevel containingSubLevel) {
         final Pose3d originalPose = new Pose3d(subLevel.logicalPose());
 
-        final Vector3d velocity = Sable.HELPER.getVelocity(level, subLevel.logicalPose().position(), new Vector3d());
-        final RigidBodyHandle containingHandle = physicsSystem.getPhysicsHandle((ServerSubLevel) containingSubLevel);
-        pipeline.addLinearAndAngularVelocity(subLevel, velocity, containingHandle.getAngularVelocity());
 
         // re-transform after center of mass is fixed
         // we don't need to set the orientation again as it couldn't have changed
-        final Pose3d containingPose = containingSubLevel.logicalPose();
         containingPose.transformPosition(subLevel.logicalPose().position());
 
-        subLevel.setSplitFrom((ServerSubLevel) containingSubLevel, originalPose);
+        final Vector3d localPos = subLevel.logicalPose().position().sub(containingPose.position(), new Vector3d());
+        pipeline.addLinearAndAngularVelocity(subLevel, containingAngularVelocity.cross(localPos, localPos).add(containingLinearVelocity), containingAngularVelocity);
+
+        if (containingSubLevel != null) {
+            subLevel.setSplitFrom((ServerSubLevel) containingSubLevel, originalPose);
+        }
     }
 
     /**

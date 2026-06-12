@@ -263,4 +263,9 @@ impl SubLevelOctree {
     fn node_to_block_id(&self, node: i32) -> i32 {
         -node - 1
     }
+
+    /// Checks if the octree is empty
+    pub fn is_empty(&self) -> bool {
+        return self.buffer[0] == 0;
+    }
 }

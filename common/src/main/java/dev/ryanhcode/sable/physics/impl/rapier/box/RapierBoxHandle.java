@@ -9,15 +9,15 @@ import org.joml.Quaterniondc;
 import org.joml.Vector3dc;
 
 @ApiStatus.Internal
-public record RapierBoxHandle(int sceneId, int id, double[] poseCache) implements BoxHandle {
+public record RapierBoxHandle(long sceneHandle, int id, double[] poseCache) implements BoxHandle {
 
-    public static RapierBoxHandle create(final int sceneId, final Pose3dc pose, final Vector3dc halfExtents, final double mass) {
+    public static RapierBoxHandle create(final long sceneHandle, final Pose3dc pose, final Vector3dc halfExtents, final double mass) {
         final Vector3dc pos = pose.position();
         final Quaterniondc rot = pose.orientation();
 
         final int id = Rapier3D.nextBodyID();
-        Rapier3D.createBox(sceneId, id, mass, halfExtents.x(), halfExtents.y(), halfExtents.z(), new double[]{pos.x(), pos.y(), pos.z(), rot.x(), rot.y(), rot.z(), rot.w()});
-        return new RapierBoxHandle(sceneId, id, new double[7]);
+        Rapier3D.createBox(sceneHandle, id, mass, halfExtents.x(), halfExtents.y(), halfExtents.z(), new double[]{pos.x(), pos.y(), pos.z(), rot.x(), rot.y(), rot.z(), rot.w()});
+        return new RapierBoxHandle(sceneHandle, id, new double[7]);
     }
 
     /**
@@ -25,7 +25,7 @@ public record RapierBoxHandle(int sceneId, int id, double[] poseCache) implement
      */
     @Override
     public void readPose(final Pose3d dest) {
-        Rapier3D.getPose(this.sceneId, this.id, this.poseCache);
+        Rapier3D.getPose(this.sceneHandle, this.id, this.poseCache);
 
         dest.position().set(this.poseCache[0], this.poseCache[1], this.poseCache[2]);
         dest.orientation().set(this.poseCache[3], this.poseCache[4], this.poseCache[5], this.poseCache[6]);
@@ -36,7 +36,7 @@ public record RapierBoxHandle(int sceneId, int id, double[] poseCache) implement
      */
     @Override
     public void remove() {
-        Rapier3D.removeBox(this.sceneId, this.id);
+        Rapier3D.removeBox(this.sceneHandle, this.id);
     }
 
     /**
@@ -44,7 +44,7 @@ public record RapierBoxHandle(int sceneId, int id, double[] poseCache) implement
      */
     @Override
     public void wakeUp() {
-        Rapier3D.wakeUpObject(this.sceneId, this.id);
+        Rapier3D.wakeUpObject(this.sceneHandle, this.id);
     }
 
     /**

@@ -13,11 +13,14 @@ use rapier3d::prelude::ShapeType::Custom;
 use rapier3d::prelude::{Aabb, Real};
 
 use crate::algo::find_collision_pairs;
-use crate::scene::{ChunkAccess, LevelColliderID, SableManifoldInfo};
-use crate::{ActiveLevelColliderInfo, PhysicsState, get_physics_state, get_scene_ref};
+use crate::scene::{
+    ChunkAccess, LevelColliderID, SableManifoldInfo, SableManifoldInfoMap, SableSceneData,
+};
+use crate::{ActiveLevelColliderInfo, PhysicsState};
 use marten::level::VoxelPhysicsState::{Edge, Face, Interior};
 use marten::level::{NEEDS_HOOKS_USER_DATA, VoxelPhysicsState};
 use std::sync::atomic::Ordering;
+use std::sync::{Arc, RwLock};
 
 /// The distance we scale collision points local to the box collider for before we check interior collisions
 /// This helps avoid a missed interior collision when points are slightly outside of their voxel on an axis
@@ -29,7 +32,11 @@ const INTERIOR_COLLISION_SCALE_FACTOR: Real = 0.99;
 /// to rule it as an interior collision
 const INTERIOR_COLLISION_CHECK_DISTANCE: f64 = 0.015;
 
-pub struct SableDispatcher;
+#[derive(Clone)]
+pub struct SableDispatcher {
+    pub sable_data: Arc<RwLock<SableSceneData>>,
+    pub manifold_info_map: Arc<SableManifoldInfoMap>,
+}
 
 impl SableDispatcher {
     /// Computes the local, inclusive block bounds of a global aabb with inflation
@@ -146,7 +153,7 @@ where
         }
 
         if g1.shape_type() == Custom && g2.shape_type() != Custom {
-            Self::static_world_vs_collider::<ContactData>(
+            self.static_world_vs_collider::<ContactData>(
                 pos12,
                 g1.as_shape::<LevelCollider>().unwrap(),
                 g2,
@@ -155,7 +162,7 @@ where
                 false,
             );
         } else if g1.shape_type() != Custom && g2.shape_type() == Custom {
-            Self::static_world_vs_collider::<ContactData>(
+            self.static_world_vs_collider::<ContactData>(
                 &pos12.inverse(),
                 g2.as_shape::<LevelCollider>().unwrap(),
                 g1,
@@ -167,37 +174,39 @@ where
             assert_eq!(g1.shape_type(), Custom);
             assert_eq!(g2.shape_type(), Custom);
 
-            // cast to LevelCollider
             let g1 = g1.as_shape::<LevelCollider>().unwrap();
             let g2 = g2.as_shape::<LevelCollider>().unwrap();
 
-            let scene = get_scene_ref(g1.scene_id);
-
             if g1.is_static && !g2.is_static {
-                Self::world_vs_world::<ContactData>(pos12, g1, g2, prediction, manifolds, false);
+                self.world_vs_world::<ContactData>(pos12, g1, g2, prediction, manifolds, false);
             } else if !g1.is_static && !g2.is_static {
-                let body_1 = g1
-                    .id
-                    .map(|id| &scene.level_colliders[&(id as LevelColliderID)])
-                    .unwrap();
-                let body_2 = g2
-                    .id
-                    .map(|id| &scene.level_colliders[&(id as LevelColliderID)])
-                    .unwrap();
+                let swap = {
+                    let sable_data = self.sable_data.read().unwrap();
+                    let body_1 = g1
+                        .id
+                        .map(|id| &sable_data.level_colliders[&(id as LevelColliderID)])
+                        .unwrap();
+                    let body_2 = g2
+                        .id
+                        .map(|id| &sable_data.level_colliders[&(id as LevelColliderID)])
+                        .unwrap();
 
-                let extents_1 = body_1.local_bounds_max.unwrap() - body_1.local_bounds_min.unwrap()
-                    + IVec3::ONE;
-                let extents_2 = body_2.local_bounds_max.unwrap() - body_2.local_bounds_min.unwrap()
-                    + IVec3::ONE;
+                    let extents_1 = body_1.local_bounds_max.unwrap()
+                        - body_1.local_bounds_min.unwrap()
+                        + IVec3::ONE;
+                    let extents_2 = body_2.local_bounds_max.unwrap()
+                        - body_2.local_bounds_min.unwrap()
+                        + IVec3::ONE;
 
-                let volume_1 = extents_1.x * extents_1.y * extents_1.z;
-                let volume_2 = extents_2.x * extents_2.y * extents_2.z;
+                    let volume_1 = extents_1.x * extents_1.y * extents_1.z;
+                    let volume_2 = extents_2.x * extents_2.y * extents_2.z;
 
-                // Swap the bodies so we're always doing the least amount of work possible for collision detection
-                let swap = volume_1 < volume_2;
+                    // Swap the bodies so we're always doing the least amount of work possible for collision detection
+                    volume_1 < volume_2
+                };
 
                 if swap {
-                    Self::world_vs_world::<ContactData>(
+                    self.world_vs_world::<ContactData>(
                         &pos12.inverse(),
                         g2,
                         g1,
@@ -206,9 +215,7 @@ where
                         true,
                     );
                 } else {
-                    Self::world_vs_world::<ContactData>(
-                        pos12, g1, g2, prediction, manifolds, false,
-                    );
+                    self.world_vs_world::<ContactData>(pos12, g1, g2, prediction, manifolds, false);
                 }
             }
         }
@@ -238,6 +245,7 @@ where
 
 impl SableDispatcher {
     fn static_world_vs_collider<ContactData: Default + Copy>(
+        &self,
         pos12: &Pose3,
         g1: &LevelCollider,
         g2: &dyn Shape,
@@ -245,12 +253,12 @@ impl SableDispatcher {
         manifolds: &mut Vec<ContactManifold<ContactManifoldData, ContactData>>,
         swap: bool,
     ) {
-        let physics_state = unsafe { get_physics_state() };
-        let scene = get_scene_ref(g1.scene_id);
+        let physics_state = crate::get_physics_state();
+        let sable_data = self.sable_data.read().unwrap();
 
         let collider_info = g1
             .id
-            .map(|id| &scene.level_colliders[&(id as LevelColliderID)]);
+            .map(|id| &sable_data.level_colliders[&(id as LevelColliderID)]);
         let center_of_mass_1 = collider_info.map_or(DVec3::ZERO, |b| b.center_of_mass.unwrap());
 
         let mut local_aabb = g2.compute_aabb(pos12);
@@ -270,7 +278,7 @@ impl SableDispatcher {
         {
             info
         } else {
-            scene
+            &*sable_data
         };
 
         for x in local_min.x..=local_max.x {
@@ -363,8 +371,38 @@ impl SableDispatcher {
                                 .expect("uh oh");
                         }
 
-                        manifolds[manifold_index].data.user_data =
-                            voxel_collider_data.get_user_data();
+                        if !manifolds[manifold_index].points.is_empty() {
+                            let index = self
+                                .manifold_info_map
+                                .counter
+                                .fetch_add(1, Ordering::Relaxed);
+
+                            let block_pos = IVec3::new(x, y, z);
+                            self.manifold_info_map.list.insert(
+                                index,
+                                if swap {
+                                    SableManifoldInfo {
+                                        pos_a: IVec3::ZERO,
+                                        pos_b: block_pos,
+                                        col_a: 0,
+                                        col_b: block_id as usize,
+                                    }
+                                } else {
+                                    SableManifoldInfo {
+                                        pos_a: block_pos,
+                                        pos_b: IVec3::ZERO,
+                                        col_a: block_id as usize,
+                                        col_b: 0,
+                                    }
+                                },
+                            );
+
+                            manifolds[manifold_index].data.user_data =
+                                voxel_collider_data.get_user_data() | ((index << 1) as u32);
+                        } else {
+                            manifolds[manifold_index].data.user_data =
+                                voxel_collider_data.get_user_data();
+                        }
 
                         if collider_info.is_some()
                             && let Some(_velocities) = collider_info.unwrap().fake_velocities
@@ -392,6 +430,7 @@ impl SableDispatcher {
     }
 
     fn world_vs_world<ContactData: Default + Copy>(
+        &self,
         pos12: &Pose3,
         g1: &LevelCollider,
         g2: &LevelCollider,
@@ -399,13 +438,13 @@ impl SableDispatcher {
         manifolds: &mut Vec<ContactManifold<ContactManifoldData, ContactData>>,
         swap: bool,
     ) {
-        let physics_state = unsafe { get_physics_state() };
-        let scene = get_scene_ref(g1.scene_id);
+        let physics_state = crate::get_physics_state();
+        let sable_data = self.sable_data.read().unwrap();
 
         let collider_info_1 = g1
             .id
-            .map(|id| &scene.level_colliders[&(id as LevelColliderID)]);
-        let collider_info_2 = &scene.level_colliders[&(g2.id.unwrap() as LevelColliderID)];
+            .map(|id| &sable_data.level_colliders[&(id as LevelColliderID)]);
+        let collider_info_2 = &sable_data.level_colliders[&(g2.id.unwrap() as LevelColliderID)];
         let center_of_mass_1 = collider_info_1.map_or(DVec3::ZERO, |b| b.center_of_mass.unwrap());
         let center_of_mass_2 = collider_info_2.center_of_mass.unwrap();
 
@@ -414,13 +453,13 @@ impl SableDispatcher {
         {
             info
         } else {
-            scene
+            &*sable_data
         };
 
         let chunk_access_2: &dyn ChunkAccess = if collider_info_2.has_own_chunks() {
             collider_info_2
         } else {
-            scene
+            &*sable_data
         };
 
         // let local_aabb = g2.compute_aabb(&pos12);
@@ -436,6 +475,7 @@ impl SableDispatcher {
             prediction,
             256,
             false,
+            &sable_data,
         );
 
         for (static_pos, dynamic_pos) in pairs.iter() {
@@ -581,12 +621,12 @@ impl SableDispatcher {
                         center_of_mass_2,
                         &mut new_manifold,
                     ) {
-                        let index = scene
+                        let index = self
                             .manifold_info_map
                             .counter
                             .fetch_add(1, Ordering::Relaxed);
 
-                        scene.manifold_info_map.list.insert(
+                        self.manifold_info_map.list.insert(
                             index,
                             if swap {
                                 SableManifoldInfo {
@@ -723,7 +763,7 @@ fn is_interior_collision<ManifoldData: Default + Clone, ContactData: Default + C
     center_of_mass_2: DVec3,
     manifold: &mut ContactManifold<ManifoldData, ContactData>,
 ) -> bool {
-    let physics_state = unsafe { get_physics_state() };
+    let physics_state = crate::get_physics_state();
 
     manifold.points.retain(|point| {
         if collider_info_1.is_none()
@@ -735,7 +775,7 @@ fn is_interior_collision<ManifoldData: Default + Clone, ContactData: Default + C
 
             let displaced_p1 = world_p1 + normal1 * 0.01;
 
-            if is_inside_voxel_collider(chunk_access_1, physics_state, block_a, displaced_p1) {
+            if is_inside_voxel_collider(chunk_access_1, &physics_state, block_a, displaced_p1) {
                 return false;
             }
         }
@@ -750,7 +790,7 @@ fn is_interior_collision<ManifoldData: Default + Clone, ContactData: Default + C
 
             let displaced_p2 = world_p2 + normal2 * INTERIOR_COLLISION_CHECK_DISTANCE;
 
-            if is_inside_voxel_collider(chunk_access_2, physics_state, block_b, displaced_p2) {
+            if is_inside_voxel_collider(chunk_access_2, &physics_state, block_b, displaced_p2) {
                 return false;
             }
         }

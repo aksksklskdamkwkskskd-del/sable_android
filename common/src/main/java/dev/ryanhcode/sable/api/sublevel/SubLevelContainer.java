@@ -18,12 +18,14 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2i;
+import org.joml.Vector3dc;
 
 import java.util.*;
 
@@ -356,6 +358,13 @@ public abstract class SubLevelContainer {
      */
     public boolean inBounds(final BlockPos pos) {
         return this.inBounds(pos.getX() >> SectionPos.SECTION_BITS, pos.getZ() >> SectionPos.SECTION_BITS);
+    }
+
+    /**
+     * @return if a global position is within the plotgrid.
+     */
+    public boolean inBounds(final Vector3dc pos) {
+        return this.inBounds(Mth.floor(pos.x()) >> SectionPos.SECTION_BITS, Mth.floor(pos.z()) >> SectionPos.SECTION_BITS);
     }
 
     /**

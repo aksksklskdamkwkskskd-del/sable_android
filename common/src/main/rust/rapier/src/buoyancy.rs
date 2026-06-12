@@ -1,7 +1,6 @@
 use crate::scene::ChunkAccess;
 use crate::{
     algo::{DEFAULT_COLLISION_PARALLEL_CUTOFF, find_collision_pairs},
-    get_physics_state_mut,
     scene::PhysicsScene,
 };
 use marten::Real;
@@ -11,16 +10,21 @@ use rapier3d::glamx::{DVec3, IVec3};
 use rapier3d::math::Vec3;
 use rapier3d::prelude::RigidBodyVelocity;
 
-pub fn compute_buoyancy(scene: &mut PhysicsScene) {
-    let state = unsafe { get_physics_state_mut() };
-    for (id, body_handle) in scene.rigid_bodies.iter() {
-        let info = scene.level_colliders.get(id);
+/// Computes buoyancy
+pub fn compute_buoyancy(scene: &PhysicsScene) {
+    let physics_state = crate::get_physics_state();
+    let collider_map = &physics_state.voxel_collider_map;
+    let sable_data = scene.sable_data.read().unwrap();
+    let mut sim_data = scene.sim_data.write().unwrap();
+
+    for (id, body_handle) in sable_data.rigid_bodies.iter() {
+        let info = sable_data.level_colliders.get(id);
 
         if info.is_none() {
             continue;
         }
         let info = info.unwrap();
-        let Some(body) = scene.rigid_body_set.get_mut(*body_handle) else {
+        let Some(body) = sim_data.rigid_body_set.get_mut(*body_handle) else {
             panic!("No body with given handle!");
         };
 
@@ -43,6 +47,7 @@ pub fn compute_buoyancy(scene: &mut PhysicsScene) {
             0.0,
             DEFAULT_COLLISION_PARALLEL_CUTOFF,
             true,
+            &sable_data,
         );
         let vels: RigidBodyVelocity<Real> = *body.vels();
 
@@ -67,9 +72,9 @@ pub fn compute_buoyancy(scene: &mut PhysicsScene) {
                 do_drag(body, &vels, static_pos, &local_pos, 0.5, 1.0);
             }
         }
-        let scene = state.scenes.get_mut(&scene.scene_id).unwrap();
         for (static_pos, dynamic_pos) in pairs.iter() {
-            let chunk = scene.get_chunk(dynamic_pos.x >> 4, dynamic_pos.y >> 4, dynamic_pos.z >> 4);
+            let chunk =
+                sable_data.get_chunk(dynamic_pos.x >> 4, dynamic_pos.y >> 4, dynamic_pos.z >> 4);
 
             if chunk.is_none() {
                 continue;
@@ -86,9 +91,8 @@ pub fn compute_buoyancy(scene: &mut PhysicsScene) {
                 continue;
             }
 
-            let voxel_collider_data = &state
-                .voxel_collider_map
-                .get((block_id - 1) as usize, dynamic_pos.clone());
+            let voxel_collider_data =
+                &collider_map.get((block_id - 1) as usize, dynamic_pos.clone());
 
             let Some(voxel_collider_data) = &voxel_collider_data else {
                 continue;
