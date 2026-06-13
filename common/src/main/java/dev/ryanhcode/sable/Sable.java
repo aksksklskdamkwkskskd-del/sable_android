@@ -1,7 +1,6 @@
 package dev.ryanhcode.sable;
 
 import com.mojang.logging.LogUtils;
-import dev.ryanhcode.sable.api.physics.PhysicsPipeline;
 import dev.ryanhcode.sable.api.physics.force.ForceGroups;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
@@ -11,7 +10,6 @@ import dev.ryanhcode.sable.index.SableTags;
 import dev.ryanhcode.sable.network.tcp.SableTCPPackets;
 import dev.ryanhcode.sable.physics.config.block_properties.PhysicsBlockPropertiesDefinitionLoader;
 import dev.ryanhcode.sable.physics.config.block_properties.PhysicsBlockPropertyTypes;
-import dev.ryanhcode.sable.physics.impl.rapier.RapierPhysicsPipeline;
 import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
 import dev.ryanhcode.sable.sublevel.system.SubLevelTrackingSystem;
 import dev.ryanhcode.sable.sublevel.tracking_points.SubLevelTrackingPointObserver;
@@ -45,14 +43,6 @@ public final class Sable {
 
         LOGGER.info("{} loaded!", MOD_NAME);
     }
-
-    /**
-     * Creates a physics pipeline with the current configuration.
-     */
-    public static PhysicsPipeline createPhysicsPipeline(final ServerLevel level) {
-        return new RapierPhysicsPipeline(level);
-    }
-
     /**
      * @param path the path to the resource
      * @return a {@link ResourceLocation} with a {@link Sable#MOD_ID} namespace

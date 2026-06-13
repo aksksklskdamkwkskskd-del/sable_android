@@ -7,6 +7,7 @@ pipeline {
     }
     environment {
         CI = 'true'
+        SNAPSHOT = 'true'
     }
     stages {
         stage('Clean') {
@@ -16,15 +17,15 @@ pipeline {
                 sh './gradlew clean'
             }
         }
-        stage('Build Release') {
+        stage('Build Snapshot') {
             steps {
                 echo 'Building'
                 sh './gradlew build'
             }
         }
-        stage('Publish Release') {
+        stage('Publish Snapshot') {
             environment {
-                MAVEN_PUBLISH_URL = 'https://maven.ryanhcode.dev/releases'
+                MAVEN_PUBLISH_URL = 'https://maven.ryanhcode.dev/snapshots'
             }
 
             steps {

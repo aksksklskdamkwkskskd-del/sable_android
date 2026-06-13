@@ -4,6 +4,14 @@ plugins {
     id "checkstyle"
 }
 
+if (System.getenv("SNAPSHOT") != null) {
+    String buildNumber = System.getenv("BUILD_NUMBER")
+
+    if (buildNumber != null) {
+        version += "-$buildNumber"
+    }
+}
+
 base {
     archivesName = "${mod_id}-${project.name}-${minecraft_version}"
 }
@@ -114,19 +122,6 @@ dependencies {
     compileOnly("curse.maven:vista-1368607:$vista_version")
 }
 
-// Declare capabilities on the outgoing configurations.
-// Read more about capabilities here: https://docs.gradle.org/current/userguide/component_capabilities.html#sec:declaring-additional-capabilities-for-a-local-component
-['apiElements', 'runtimeElements', 'sourcesElements'/*, 'javadocElements'*/].each { variant ->
-    configurations."$variant".outgoing {
-        capability("$group:${base.archivesName.get()}:$version")
-        capability("$group:$mod_id-${project.name}-${minecraft_version}:$version")
-        capability("$group:$mod_id:$version")
-    }
-    publishing.publications.configureEach {
-        suppressPomMetadataWarningsFor(variant)
-    }
-}
-
 sourcesJar {
     from(rootProject.file('LICENSE.md')) {
         rename { "${it}" }
@@ -209,7 +204,7 @@ publishing {
     repositories {
         mavenLocal()
         maven {
-            url = System.getenv('local_maven_url')
+            url = System.getenv('MAVEN_PUBLISH_URL')
 
             credentials {
                 username = System.getenv('local_maven_user')

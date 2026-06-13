@@ -4,6 +4,7 @@ import dev.ryanhcode.sable.Sable;
 import dev.ryanhcode.sable.SableConfig;
 import dev.ryanhcode.sable.api.block.BlockEntitySubLevelActor;
 import dev.ryanhcode.sable.api.physics.PhysicsPipeline;
+import dev.ryanhcode.sable.api.physics.PhysicsPipelineProvider;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.physics.mass.MassTracker;
 import dev.ryanhcode.sable.api.physics.object.ArbitraryPhysicsObject;
@@ -117,7 +118,9 @@ public class SubLevelPhysicsSystem implements SubLevelObserver {
      */
     public SubLevelPhysicsSystem(final ServerLevel level) {
         this.level = level;
-        this.pipeline = Sable.createPhysicsPipeline(this.level);
+
+        Sable.LOGGER.info("Creating physics pipeline for {} using {}", level.dimension(), PhysicsPipelineProvider.INSTANCE.getClass().getSimpleName());
+        this.pipeline = PhysicsPipelineProvider.INSTANCE.createPipeline(level);
     }
 
     /**
@@ -179,6 +182,7 @@ public class SubLevelPhysicsSystem implements SubLevelObserver {
     @Override
     public void onSubLevelAdded(final SubLevel subLevel) {
         if (subLevel instanceof final ServerSubLevel serverSubLevel) {
+            serverSubLevel.buildMassTracker();
             this.pipeline.add(serverSubLevel, serverSubLevel.logicalPose());
         } else {
             throw new UnsupportedOperationException("Client sub-levels are not supported by the physics system. How did we end up here?");
@@ -354,6 +358,8 @@ public class SubLevelPhysicsSystem implements SubLevelObserver {
         // The sub-level has NaN'ed!
         // We need to remove it and re-add from the physics world.
         this.pipeline.remove(serverSubLevel);
+
+        serverSubLevel.buildMassTracker();
         this.pipeline.add(serverSubLevel, serverSubLevel.logicalPose());
 
         if (serverSubLevel.getMassTracker().getCenterOfMass() == null) {

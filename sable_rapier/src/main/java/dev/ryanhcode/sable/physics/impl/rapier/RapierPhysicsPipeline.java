@@ -194,8 +194,6 @@ public class RapierPhysicsPipeline implements PhysicsPipeline {
         final Vector3dc pos = pose.position();
         final Quaterniondc rot = pose.orientation();
 
-        subLevel.buildMassTracker();
-
         final int id = Rapier3D.getID(subLevel);
         Rapier3D.createSubLevel(this.scene.handle(), id, new double[]{pos.x(), pos.y(), pos.z(), rot.x(), rot.y(), rot.z(), rot.w()});
 
@@ -279,6 +277,7 @@ public class RapierPhysicsPipeline implements PhysicsPipeline {
             }
         }
 
+        this.updateContraptionPose(contraption, 1.0f);
         Rapier3D.setLocalBounds(this.scene.handle(), id, localBounds.minX, localBounds.minY, localBounds.minZ, localBounds.maxX, localBounds.maxY, localBounds.maxZ);
     }
 
@@ -581,49 +580,54 @@ public class RapierPhysicsPipeline implements PhysicsPipeline {
     }
 
     private void updateContraptionPoses() {
+        final SubLevelPhysicsSystem system = SubLevelPhysicsSystem.require(this.level);
+        final double partialPhysicsTick = system.getPartialPhysicsTick();
+
         for (final KinematicContraption contraption : this.activeContraptions.keySet()) {
-            final TrackedKinematicContraption trackedContraption = this.activeContraptions.get(contraption);
-            final SubLevelPhysicsSystem system = SubLevelPhysicsSystem.require(this.level);
-            final double partialPhysicsTick = system.getPartialPhysicsTick();
+            this.updateContraptionPose(contraption, partialPhysicsTick);
+        }
+    }
 
-            final SubLevel mountSubLevel = Sable.HELPER.getContaining(this.level, contraption.sable$getPosition());
-            final Vector3dc parentCenterOfMass = mountSubLevel != null ? ((ServerSubLevel) mountSubLevel).getMassTracker().getCenterOfMass() : JOMLConversion.ZERO;
+    private void updateContraptionPose(final KinematicContraption contraption, final double partialPhysicsTick) {
+        final TrackedKinematicContraption trackedContraption = this.activeContraptions.get(contraption);
 
-            final Vector3dc lastPosition = new Vector3d(contraption.sable$getPosition(partialPhysicsTick - 1.0f));
-            final Quaterniondc lastOrientation = new Quaterniond(contraption.sable$getOrientation(partialPhysicsTick - 1.0f));
+        final SubLevel mountSubLevel = Sable.HELPER.getContaining(this.level, contraption.sable$getPosition());
+        final Vector3dc parentCenterOfMass = mountSubLevel != null ? ((ServerSubLevel) mountSubLevel).getMassTracker().getCenterOfMass() : JOMLConversion.ZERO;
 
-            final Vector3d pos = new Vector3d(contraption.sable$getPosition(partialPhysicsTick));
-            final Quaterniondc rot = contraption.sable$getOrientation(partialPhysicsTick);
+        final Vector3dc lastPosition = new Vector3d(contraption.sable$getPosition(partialPhysicsTick - 1.0f));
+        final Quaterniondc lastOrientation = new Quaterniond(contraption.sable$getOrientation(partialPhysicsTick - 1.0f));
 
-            final Vector3d linVel = pos.sub(lastPosition, new Vector3d());
-            final Vector3d angVel = SableMathUtils.getAngularVelocity(lastOrientation, rot, new Vector3d());
+        final Vector3d pos = new Vector3d(contraption.sable$getPosition(partialPhysicsTick));
+        final Quaterniondc rot = contraption.sable$getOrientation(partialPhysicsTick);
 
-            linVel.mul(20.0);
-            angVel.mul(20.0);
-            rot.transformInverse(linVel);
-            rot.transformInverse(angVel);
+        final Vector3d linVel = pos.sub(lastPosition, new Vector3d());
+        final Vector3d angVel = SableMathUtils.getAngularVelocity(lastOrientation, rot, new Vector3d());
 
-            pos.sub(parentCenterOfMass);
+        linVel.mul(20.0);
+        angVel.mul(20.0);
+        rot.transformInverse(linVel);
+        rot.transformInverse(angVel);
 
-            if (
-                    pos.distanceSquared(trackedContraption.lastUploadedPosition()) > DISTANCE_THRESHOLD * DISTANCE_THRESHOLD ||
-                            linVel.distanceSquared(trackedContraption.lastUploadedLinVel()) > DISTANCE_THRESHOLD * DISTANCE_THRESHOLD ||
-                            angVel.distanceSquared(trackedContraption.lastUploadedAngVel()) > DISTANCE_THRESHOLD * DISTANCE_THRESHOLD ||
-                            rot.div(trackedContraption.lastUploadedOrientation(), new Quaterniond()).angle() > ANGULAR_THRESHOLD * ANGULAR_THRESHOLD
-            ) {
-                final MassTracker massTracker = contraption.sable$getMassTracker();
-                final Vector3dc centerOfMass = massTracker.getCenterOfMass();
+        pos.sub(parentCenterOfMass);
 
-                final double[] centerOfMassArray = new double[]{centerOfMass.x(), centerOfMass.y(), centerOfMass.z()};
-                final double[] poseArray = {pos.x(), pos.y(), pos.z(), rot.x(), rot.y(), rot.z(), rot.w()};
-                final double[] velocityArray = {linVel.x(), linVel.y(), linVel.z(), angVel.x(), angVel.y(), angVel.z()};
-                Rapier3D.setKinematicContraptionTransform(this.scene.handle(), trackedContraption.id(), centerOfMassArray, poseArray, velocityArray);
+        if (
+                pos.distanceSquared(trackedContraption.lastUploadedPosition()) > DISTANCE_THRESHOLD * DISTANCE_THRESHOLD ||
+                        linVel.distanceSquared(trackedContraption.lastUploadedLinVel()) > DISTANCE_THRESHOLD * DISTANCE_THRESHOLD ||
+                        angVel.distanceSquared(trackedContraption.lastUploadedAngVel()) > DISTANCE_THRESHOLD * DISTANCE_THRESHOLD ||
+                        rot.div(trackedContraption.lastUploadedOrientation(), new Quaterniond()).angle() > ANGULAR_THRESHOLD * ANGULAR_THRESHOLD
+        ) {
+            final MassTracker massTracker = contraption.sable$getMassTracker();
+            final Vector3dc centerOfMass = massTracker.getCenterOfMass();
 
-                trackedContraption.lastUploadedPosition().set(pos);
-                trackedContraption.lastUploadedLinVel().set(linVel);
-                trackedContraption.lastUploadedAngVel().set(angVel);
-                trackedContraption.lastUploadedOrientation().set(rot);
-            }
+            final double[] centerOfMassArray = new double[]{centerOfMass.x(), centerOfMass.y(), centerOfMass.z()};
+            final double[] poseArray = {pos.x(), pos.y(), pos.z(), rot.x(), rot.y(), rot.z(), rot.w()};
+            final double[] velocityArray = {linVel.x(), linVel.y(), linVel.z(), angVel.x(), angVel.y(), angVel.z()};
+            Rapier3D.setKinematicContraptionTransform(this.scene.handle(), trackedContraption.id(), centerOfMassArray, poseArray, velocityArray);
+
+            trackedContraption.lastUploadedPosition().set(pos);
+            trackedContraption.lastUploadedLinVel().set(linVel);
+            trackedContraption.lastUploadedAngVel().set(angVel);
+            trackedContraption.lastUploadedOrientation().set(rot);
         }
     }
 

@@ -224,7 +224,15 @@ public interface PhysicsPipeline {
     @Nullable
     @Contract("null, null, _ -> fail")
     default <T extends PhysicsConstraintHandle> T addConstraint(@Nullable final PhysicsPipelineBody bodyA, @Nullable final PhysicsPipelineBody bodyB, @NotNull final PhysicsConstraintConfiguration<T> configuration) {
-        throw new UnsupportedOperationException("Not implemented");
+        if (bodyA == null && bodyB == null) {
+            throw new IllegalArgumentException("Cannot add a constraint between the static world and static world");
+        }
+
+        if (bodyA == bodyB) {
+            throw new IllegalArgumentException("Cannot add a constraint between a body and itself");
+        }
+
+        return null;
     }
 
     /**
@@ -234,7 +242,7 @@ public interface PhysicsPipeline {
      */
     @ApiStatus.OverrideOnly
     default void updateConfigFrom(final PhysicsConfigData data) {
-        throw new UnsupportedOperationException("Not implemented");
+
     }
 
     /**

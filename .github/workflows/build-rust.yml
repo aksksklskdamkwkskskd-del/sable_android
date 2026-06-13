@@ -2,7 +2,7 @@ name: Build Rust Natives
 on:
   push:
     paths:
-      - 'common/src/main/rust/**'
+      - 'sable_rapier/src/main/rust/**'
       - '.github/workflows/build-rust.yml'
   workflow_dispatch:
 
@@ -33,11 +33,11 @@ jobs:
       - name: Cache cargo
         uses: actions/cache@v4
         with:
-          path: ${{ github.workspace }}/common/build/cargo
-          key: ${{ runner.os }}-node-${{ hashFiles('common/src/main/rust/**/Cargo.lock') }}
+          path: ${{ github.workspace }}/sable_rapier/build/cargo
+          key: ${{ runner.os }}-node-${{ hashFiles('sable_rapier/src/main/rust/**/Cargo.lock') }}
 
       - name: Run Gradle Task
-        run: ./gradlew common:buildImages common:buildRustNatives
+        run: ./gradlew sable_rapier:buildImages sable_rapier:buildRustNatives
 
       - name: Take ownership of the workspace
         run: sudo chown -R $USER:$USER .

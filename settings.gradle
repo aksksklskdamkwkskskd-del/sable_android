@@ -49,3 +49,5 @@ rootProject.name = 'sable'
 include('common')
 include('fabric')
 include('neoforge')
+
+include 'sable_rapier'

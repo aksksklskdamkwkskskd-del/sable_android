@@ -73,7 +73,7 @@ public class StaticPhysicsPipeline implements PhysicsPipeline {
 
     @Override
     public Pose3d readPose(final ServerSubLevel subLevel, final Pose3d dest) {
-        return dest;
+        return dest.set(subLevel.logicalPose());
     }
 
     /**

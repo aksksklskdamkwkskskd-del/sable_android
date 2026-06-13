@@ -28,6 +28,8 @@ dependencies {
     include(modApi("foundry.veil:veil-fabric-${project.minecraft_version}:${project.veil_version}"))
     modCompileOnly("foundry.imguimc:imguimc-fabric-${project.minecraft_version}:${project.imguimc_version}")
 
+    include(runtimeOnly(project(path: ":sable_rapier", configuration: "runtimeElements")))
+
     include(modApi("fuzs.forgeconfigapiport:forgeconfigapiport-fabric:${forgeconfigapiport_version}")) //source: https://github.com/Fuzss/forgeconfigapiport-fabric
 }
 
