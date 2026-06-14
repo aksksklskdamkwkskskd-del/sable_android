@@ -1,2 +1,1 @@
- - Fix issues with glibc support on Linux Sable Rapier natives
- - Fix Create Blueprints not working on sub-levels
+- Fix a crash with the Create sticker and new constraints

@@ -157,7 +157,7 @@ String createModVersionRange() {
 
 processResources {
     var expandProps = [
-            'version'                      : version,
+            'version'                      : rootProject.version, // Make sure snapshots aren't included
             'group'                        : project.group, //Else we target the task's group.
             'minecraft_version'            : minecraft_version,
             'minecraft_version_range'      : minecraft_version_range,

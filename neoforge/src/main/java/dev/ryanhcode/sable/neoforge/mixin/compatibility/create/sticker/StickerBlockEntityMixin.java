@@ -210,6 +210,11 @@ public abstract class StickerBlockEntityMixin extends SmartBlockEntity implement
             throw new IllegalStateException("StickerBlockEntity must be on a ServerLevel to apply constraints.");
         }
 
+        if (thisSubLevel == otherSubLevel) {
+            this.sable$removeConstraint();
+            return;
+        }
+
         final FixedConstraintConfiguration constraint = new FixedConstraintConfiguration(
                 this.sable$constraintPos1,
                 this.sable$constraintPos2,
