@@ -62,11 +62,11 @@ jobs:
           if [[ "${{ github.event.inputs.build_ref }}" == *"1.2.2"* ]]; then
             echo "Using 1.2.2 layout"
             echo "RUST_DIR=common/src/main/rust" >> $GITHUB_ENV
-            echo "LIB_RS_PATH=common/src/main/rust/src/lib.rs" >> $GITHUB_ENV
+            echo "LIB_RS_PATH=common/src/main/rust/rapier/src/lib.rs" >> $GITHUB_ENV
           else
             echo "Using 2.0.0+ layout"
             echo "RUST_DIR=sable_rapier/src/main/rust" >> $GITHUB_ENV
-            echo "LIB_RS_PATH=sable_rapier/src/main/rust/src/lib.rs" >> $GITHUB_ENV
+            echo "LIB_RS_PATH=sable_rapier/src/main/rust/rapier/src/lib.rs" >> $GITHUB_ENV
           fi
 
       - name: Patch Rapier3D.java
