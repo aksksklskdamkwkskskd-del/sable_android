@@ -65,8 +65,8 @@ jobs:
             echo "LIB_RS_PATH=common/src/main/rust/src/lib.rs" >> $GITHUB_ENV
           else
             echo "Using 2.0.0+ layout"
-            echo "RUST_DIR=sable_rapier/rust" >> $GITHUB_ENV
-            echo "LIB_RS_PATH=sable_rapier/rust/src/lib.rs" >> $GITHUB_ENV
+            echo "RUST_DIR=sable_rapier/src/main/rust" >> $GITHUB_ENV
+            echo "LIB_RS_PATH=sable_rapier/src/main/rust/src/lib.rs" >> $GITHUB_ENV
           fi
 
       - name: Patch Rapier3D.java
@@ -219,6 +219,6 @@ jobs:
           files: ${{ env.ASSET_PATH }}
           tag_name: ${{ github.event.inputs.build_ref }}
           name: "Sable Android ${{ github.event.inputs.build_ref }}"
-          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V5.3\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
+          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V5.4\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
