@@ -80,11 +80,16 @@ or similar.
 > Which can limit the GPU vram or normal ram levels.
 
 > First, make sure if the resources (ram) are enough (+for GPU use).
+
 > Then, set allocated ram **predictably enough** amount for ram usage and GPU needs balance.
+
 > Allocation too low: Lack of resources to run, game crash
+
 > Allocation too high: No shared ram (vram) left for GPU to work, game crash as Signal 6 immediately
+
 > Consider android system, game and GPU load.
-> 8 GB as min. and ~12 GB native ram recommended.
+
+> Having 8 GB as min. and about ~12 GB native ram (phone specs) recommended.
 
 > For example: 12 GB ram, allocated ~5 GB
 
