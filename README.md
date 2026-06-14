@@ -28,35 +28,25 @@ Which is required for Create Aeronautics physics to work.
 About builds:
 
 > [!IMPORTANT]
-> Now most of the releases fixed.
-> Not all tested but should work.
+> Not all releases are tested especially Fabric, has an release anyway.
 
 > [!NOTE]
-> Fabric, still none tested but has an release anyway.
-
-> [!NOTE]
-> This README needs some update.
+> This README still needs some update.
 > Some information might be deprecated, be aware.
 
-# How can I..?
-
-**Play?**
+# How to setup?
 
 Sable from releases, anything else from their sources as usual.
-- Get Android version of Sable from <a href="https://github.com/aksksklskdamkwkskskd-del/sable_android/releases/">releases</a> and Create, Create Aeronautics, etc. from their sources (eg. Modrinth).
+- Get Android version of Sable from <a href="https://github.com/aksksklskdamkwkskskd-del/sable_android/releases/">releases</a> and Create, Create Aeronautics, etc. from their sources (e.g. Modrinth).
 
-- Using NeoForge **HIGHLY RECOMMENDED**.
-- Fabric **is** included but **not tested** (Please inform me about Fabric, is it working fine?)
-
-- Tested on Amethyst Launcher (pajov fork, some late 2025 version) on Android 14.
-- Using Java 21 works fine.
-- Using MobileGlues or Zink seems fine.
+- Tested on Amethyst Launcher (pajov fork) on Android 14.
+- Using MobileGlues or Zink with Java 21 seems fine.
 
 #### Issues
 
 - You can inform me about issues _caused by the port_.
 - Please make sure it happens even if all other mods disabled. Try using base mods: Create, **Android Sable**, Create Aeronautics.
-- Using Sodium and Podium should be ok.
+- Using Sodium and Podium should be ok but be sure.
 - Try different versions to make sure.
 
 #### Classic Mod Installing Steps
@@ -69,8 +59,8 @@ Mostly under
 > Android/data/[APP-PACKAGE-NAME]/files/.minecraft
 
 or similar.
-- Inside .minecraft, create 'mods' folder and put all your mods inside there.
-- Go to your launcher and create 1.21.1 (-> current of April) NeoForge (-> use latest possible) profile.
+- Inside .minecraft, create 'mods' folder and put all your mods inside.
+- Go to your launcher and select 1.21.1 NeoForge (-> use latest possible) profile.
 - Launch your game.
 
 - You may have some issues, here are basic regular ones:
@@ -82,12 +72,28 @@ or similar.
 > [!IMPORTANT]
 > Fixes invisible shafts and moving parts of the blocks. Caused by flywheel rendering, related to Create, as it's embedded.
 
+### Game crash with (critical) Signal 6
+
+> [!IMPORTANT]
+> This indicates something important.
+> Mobile phones/ARM uses ram as shared for both CPU and GPU.
+> Which can limit the GPU vram or normal ram levels.
+
+> First, make sure if the resources (ram) are enough (+for GPU use).
+> Then, set allocated ram **predictably enough** amount for ram usage and GPU needs balance.
+> Allocation too low: Lack of resources to run, game crash
+> Allocation too high: No shared ram (vram) left for GPU to work, game crash as Signal 6 immediately
+> Consider android system, game and GPU load.
+> 8 GB as min. and ~12 GB native ram recommended.
+
+> For example: 12 GB ram, allocated ~5 GB
+
 # Basic Q&A
 
 <details>
    <summary><b>Q: Are you planning to & When will you, add [X] version to releases?</b></summary>
    
-   **A:** Trying to add all versions to supported side as I can. Right now, all new releases from main repo gets ported everyday at 00:00. If everything is fine, automatic builds will occur 1 day (max) after the main repository versions are shared.</details>
+   **A:** Trying to add all versions to supported side as I can. Right now, all new releases from main repo gets ported everyday at 00:00. If everything is fine, automatic builds will occur 1 day (max) after the main repository versions are shared (by tags).</details>
 
 </details><br>
 
@@ -106,7 +112,8 @@ or similar.
 <details>
    <summary><b>Q: Is it playable?</b></summary>
    
-   **A:** As from my experience and others feedbacks, it is. Haven't seen an issue yet. But you can inform me about <i>port issues</i> and similar.
+   **A:** As from my experience and others feedbacks, it is. Haven't seen an issue yet. But you can inform me about <i>port issues</i> and similar. 
+Still keep in mind that it can break anytime and be buggy anyway.
 </details><br>
 <br><br><br>
 <details>
@@ -131,11 +138,11 @@ Auto build via "Sable Native Android Port" action (.github/android-build.yml). B
 
 It builds both imgui to satisfy veil and satisfy + build Sable itself.
 
-It just compiles imgui and Sable for android compatibility, puts all into each other to make the ultimate android port.
+It just compiles imgui (dependency), Rapier (physics lib) and Sable (mod) for android compatibility, puts all into each other to make the ultimate android port.
 
 # ~Building (termux)~
 
-Originally, I did it inside my termux environment, on the same day it came out. This repo has simpler version of that process. (With a lot of AI help ofc.)
+Originally, I did it inside my termux environment, on the same day it came out. This repo has simpler version of that process. (With lots of AI help ofc.)
 
 Instructions are not avaible for now.
 
