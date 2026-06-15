@@ -30,7 +30,7 @@ import dev.ryanhcode.sable.sublevel.system.ticket.PhysicsChunkTicketManager;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
@@ -103,7 +103,7 @@ public class SubLevelPhysicsSystem implements SubLevelObserver {
     /**
      * All arbitrary objects currently loaded
      */
-    private final Collection<ArbitraryPhysicsObject> arbitraryObjects = new ObjectOpenHashSet<>();
+    private final Collection<ArbitraryPhysicsObject> arbitraryObjects = new ReferenceOpenHashSet<>();
     /**
      * If physics should be paused.
      */
@@ -112,6 +112,11 @@ public class SubLevelPhysicsSystem implements SubLevelObserver {
      * The substep / physics tick we're currently on
      */
     private int currentSubstep;
+
+    /**
+     * Queued wake-ups for after the physics tick
+     */
+    private final Collection<ArbitraryPhysicsObject> queuedWakeUps = new ReferenceOpenHashSet<>();
 
     /**
      * Creates a new physics system.
@@ -278,6 +283,11 @@ public class SubLevelPhysicsSystem implements SubLevelObserver {
             // we must therefore process removals every physics tick
             container.processSubLevelRemovals();
             this.updateAllPoses(container);
+
+            for (final ArbitraryPhysicsObject object : this.queuedWakeUps) {
+                object.wakeUp();
+            }
+            this.queuedWakeUps.clear();
 
             SableEventPublishPlatform.INSTANCE.postPhysicsTick(this, substepTimeStep);
         }
@@ -494,7 +504,11 @@ public class SubLevelPhysicsSystem implements SubLevelObserver {
             object.getBoundingBox(objectBounds);
 
             if (objectBounds.intersects(bounds)) {
-                object.wakeUp();
+                if (SubLevelPhysicsSystem.IN_PHYSICS_STEP) {
+                    this.queuedWakeUps.add(object);
+                } else {
+                    object.wakeUp();
+                }
             }
         }
     }
