@@ -84,9 +84,10 @@ public final class Rapier3D {
                 while ((entry = ti.getNextEntry()) != null) {
                     if (entry.getName().equals(NATIVE_NAME)) {
                         final Path tempFile = dir.resolve(NATIVE_NAME);
-                        if (!Files.exists(tempFile)) {
-                            Files.createFile(tempFile);
+                        if (Files.exists(tempFile)) {
+                            Files.delete(tempFile);
                         }
+                        Files.createFile(tempFile);
                         Files.copy(ti, tempFile, StandardCopyOption.REPLACE_EXISTING);
                         System.load(tempFile.toAbsolutePath().toString());
                         return;

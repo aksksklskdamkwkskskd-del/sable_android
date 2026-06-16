@@ -1,1 +1,4 @@
-- Fix a crash with the Create sticker and new constraints
+- Fix Sable Fabric not working (#1205)
+- Delete Sable Rapier natives file before copying
+- Fixes a crash with rope hitting fragile blocks
+- Fix client render-pose caching (#1175)

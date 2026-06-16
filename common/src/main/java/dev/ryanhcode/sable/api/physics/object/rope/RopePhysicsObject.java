@@ -1,7 +1,7 @@
 package dev.ryanhcode.sable.api.physics.object.rope;
 
-import dev.ryanhcode.sable.companion.math.BoundingBox3d;
 import dev.ryanhcode.sable.api.physics.object.ArbitraryPhysicsObject;
+import dev.ryanhcode.sable.companion.math.BoundingBox3d;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.storage.holding.SubLevelHoldingChunkMap;
 import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
