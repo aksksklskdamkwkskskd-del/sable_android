@@ -1,7 +1,24 @@
+import net.fabricmc.loom.task.RemapJarTask
+
 plugins {
     id 'me.modmuss50.mod-publish-plugin'
     id 'net.fabricmc.fabric-loom-remap'
     id 'multiloader-loader'
+}
+
+evaluationDependsOn(":sable_rapier")
+tasks.register("remapRapierJar", RemapJarTask) {
+    def rapier = project(":sable_rapier")
+    def jar = rapier.tasks.named("jar", Jar)
+    dependsOn(jar)
+
+    inputFile = jar.flatMap { it.archiveFile }
+    archiveFileName = jar.flatMap { it.archiveFileName }
+}
+
+remapJar {
+    dependsOn "remapRapierJar"
+    nestedJars.from(remapRapierJar.archiveFile)
 }
 
 dependencies {
@@ -28,7 +45,7 @@ dependencies {
     include(modApi("foundry.veil:veil-fabric-${project.minecraft_version}:${project.veil_version}"))
     modCompileOnly("foundry.imguimc:imguimc-fabric-${project.minecraft_version}:${project.imguimc_version}")
 
-    include(runtimeOnly(project(path: ":sable_rapier", configuration: "runtimeElements")))
+    runtimeOnly(project(path: ":sable_rapier", configuration: "runtimeElements"))
 
     include(modApi("fuzs.forgeconfigapiport:forgeconfigapiport-fabric:${forgeconfigapiport_version}")) //source: https://github.com/Fuzss/forgeconfigapiport-fabric
 }

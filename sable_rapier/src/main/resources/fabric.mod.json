@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "sable_rapier",
+  "version": "${version}",
+  "custom": {
+    "modmenu": {
+      "badges": [ "library" ]
+    }
+  }
+}

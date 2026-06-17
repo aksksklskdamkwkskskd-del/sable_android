@@ -6,7 +6,7 @@ buildscript {
 
 plugins {
     id 'multiloader-common'
-    id 'net.fabricmc.fabric-loom-remap'
+    id 'net.neoforged.moddev'
 }
 
 import net.jpountz.lz4.LZ4FrameOutputStream
@@ -211,6 +211,15 @@ repositories {
     mavenCentral()
 }
 
+neoForge {
+    neoFormVersion = neo_form_version
+
+    parchment {
+        minecraftVersion = parchment_minecraft
+        mappingsVersion = parchment_version
+    }
+}
+
 configurations {
     commonJava {
         canBeResolved = false
@@ -223,12 +232,6 @@ configurations {
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:${minecraft_version}"
-    mappings loom.layered {
-        officialMojangMappings()
-        parchment("org.parchmentmc.data:parchment-${parchment_minecraft}:${parchment_version}@zip")
-    }
-
     implementation "org.apache.maven:maven-artifact:3.8.5"
 
     compileOnly(project(':common')) {
