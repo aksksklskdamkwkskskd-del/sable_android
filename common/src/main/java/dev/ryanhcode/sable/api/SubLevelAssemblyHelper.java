@@ -128,7 +128,10 @@ public class SubLevelAssemblyHelper {
             kickFromContainingSubLevel(pipeline, subLevel, containingLinearVelocity, containingAngularVelocity, containingPose, !containingSubLevel.isRemoved() ? containingSubLevel : null);
         }
 
-        pipeline.teleport(subLevel, subLevel.logicalPose().position(), subLevel.logicalPose().orientation());
+        if (!subLevel.isRemoved()) {
+            pipeline.teleport(subLevel, subLevel.logicalPose().position(), subLevel.logicalPose().orientation());
+        }
+
         subLevel.updateLastPose();
 
         SubLevelAssemblyHelper.moveTrackingPoints(level, bounds, subLevel, transform);
@@ -166,7 +169,9 @@ public class SubLevelAssemblyHelper {
         containingPose.transformPosition(subLevel.logicalPose().position());
 
         final Vector3d localPos = subLevel.logicalPose().position().sub(containingPose.position(), new Vector3d());
-        pipeline.addLinearAndAngularVelocity(subLevel, containingAngularVelocity.cross(localPos, localPos).add(containingLinearVelocity), containingAngularVelocity);
+        if (!subLevel.isRemoved()) {
+            pipeline.addLinearAndAngularVelocity(subLevel, containingAngularVelocity.cross(localPos, localPos).add(containingLinearVelocity), containingAngularVelocity);
+        }
 
         if (containingSubLevel != null) {
             subLevel.setSplitFrom((ServerSubLevel) containingSubLevel, originalPose);

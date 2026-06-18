@@ -1,4 +1,2 @@
-- Fix Sable Fabric not working (#1205)
-- Delete Sable Rapier natives file before copying
-- Fixes a crash with rope hitting fragile blocks
-- Fix client render-pose caching (#1175)
+- Fix a crash with sub-level splitting
+- Fix and add recovery for an issue with sub-levels not loading in because their bounds got set to [0,0,0,0,0,0]
