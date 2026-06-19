@@ -22,9 +22,11 @@ neoForge {
         }
         client {
             client()
+            gameDirectory = project.file("runs/client")
         }
         server {
             server()
+            gameDirectory = project.file("runs/server")
         }
         gameTest {
             type = "gameTestServer"
@@ -35,11 +37,13 @@ neoForge {
             client()
             ideName = "NeoForge Client | Mixin Export (${project.path})"
             systemProperty("mixin.debug.export", "true")
+            gameDirectory = project.file("runs/client")
         }
         serverMixinExport {
             server()
             ideName = "NeoForge Server | Mixin Export (${project.path})"
             systemProperty("mixin.debug.export", "true")
+            gameDirectory = project.file("runs/server")
         }
     }
     mods {
@@ -82,9 +86,10 @@ dependencies {
     implementation("com.tterrag.registrate:Registrate:${registrate_version}")
 
     compileOnly("maven.modrinth:protomanlys-weather:${pmweather_version}")
-    compileOnly("io.github.mortuusars.exposure:exposure-${minecraft_version}-neoforge:${exposure_version}") { transitive = false }
+    compileOnly("io.github.mortuusars.exposure:exposure-${minecraft_version}-neoforge:${project.exposure_version}") { transitive = false }
     compileOnly("maven.modrinth:jade:${project.jade_version}+neoforge") { transitive = false }
     compileOnly("maven.modrinth:jade-addons-forge:${project.jade_addons_version}+neoforge") { transitive = false }
+    compileOnly("maven.modrinth:shoulder-surfing-reloaded:${minecraft_version}-${project.shouldersurfing_version}+neoforge") { transitive = false }
 
     compileOnly "net.caffeinemc:sodium-neoforge-mod:${sodium_version}"
     compileOnly("maven.modrinth:iris:$iris_version") { transitive = false }

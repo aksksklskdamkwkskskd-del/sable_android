@@ -1,6 +1,8 @@
 name: Build Rust Natives
 on:
   push:
+    branches:
+      - main
     paths:
       - 'sable_rapier/src/main/rust/**'
       - '.github/workflows/build-rust.yml'

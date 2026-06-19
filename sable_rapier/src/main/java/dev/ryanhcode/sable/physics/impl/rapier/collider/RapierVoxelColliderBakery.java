@@ -11,12 +11,14 @@ import dev.ryanhcode.sable.physics.impl.rapier.Rapier3D;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -25,7 +27,7 @@ import java.util.function.Function;
  * @author RyanH
  */
 public class RapierVoxelColliderBakery {
-    private final @NotNull BlockGetter level;
+    private final @NotNull PhysicsColliderBlockGetter level;
     private final Function<BlockState, RapierVoxelColliderData> blockPhysicsDataBuilder = Util.memoize(this::buildPhysicsDataForBlock);
 
     /**
@@ -66,11 +68,13 @@ public class RapierVoxelColliderBakery {
 
         final VoxelShape shape;
 
+        this.level.setup(childState);
         if (childState.getBlock() instanceof final BlockSubLevelCollisionShape extension) {
             shape = extension.getSubLevelCollisionShape(this.level, childState);
         } else {
             shape = childState.getCollisionShape(this.level, BlockPos.ZERO, SableCollisionContext.get());
         }
+        this.level.setup(Blocks.AIR.defaultBlockState());
 
         if (shape.isEmpty()) {
             return RapierVoxelColliderData.EMPTY;
@@ -95,7 +99,7 @@ public class RapierVoxelColliderBakery {
      * @return the physics data ID for the block at the given position, or null for empty
      */
     public @Nullable RapierVoxelColliderData getPhysicsDataForBlock(final BlockState state) {
-        final RapierVoxelColliderData data = this.blockPhysicsDataBuilder.apply(state);
+        final RapierVoxelColliderData data = this.blockPhysicsDataBuilder.apply(Objects.requireNonNull(state, "state"));
         return data == RapierVoxelColliderData.EMPTY ? null : data;
     }
 }

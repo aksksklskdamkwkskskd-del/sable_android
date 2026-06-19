@@ -10,6 +10,7 @@ import net.minecraft.world.level.material.Fluids;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import java.util.Objects;
 
 /**
  * Physics data is specific for each block regardless of where it's placed or what possible block entity state may exist.
@@ -23,10 +24,11 @@ public final class PhysicsColliderBlockGetter implements BlockGetter {
 
     public PhysicsColliderBlockGetter(final BlockGetter level) {
         this.level = level;
+        this.state = Blocks.AIR.defaultBlockState();
     }
 
     public void setup(final BlockState state) {
-        this.state = state;
+        this.state = Objects.requireNonNull(state, "state");
     }
 
     @Override
