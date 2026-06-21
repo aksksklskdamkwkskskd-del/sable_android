@@ -10,6 +10,8 @@
     { "id": "botania:corporea_burst", "required": false },
     { "id": "botania:spark", "required": false },
     { "id": "exposure:camera_stand", "required": false },
+    { "id": "another_furniture:seat", "required": false },
+    { "id": "sleep_tight:bed_entity", "required": false },
     "minecraft:snow_golem",
     "minecraft:armor_stand",
     "minecraft:minecart",

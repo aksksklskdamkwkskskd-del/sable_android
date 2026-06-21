@@ -1,4 +1,4 @@
-package dev.ryanhcode.sable.mixin.plot;
+package dev.ryanhcode.sable.mixin.plot.container;
 
 import dev.ryanhcode.sable.Sable;
 import dev.ryanhcode.sable.api.sublevel.ClientSubLevelContainer;
@@ -25,13 +25,12 @@ import java.util.function.Supplier;
 /**
  * Adds a {@link SubLevelContainer} to the server levels
  */
-@Pseudo
-@Mixin({ServerLevel.class, ClientLevel.class})
-public abstract class LevelsMixin extends Level implements SubLevelContainerHolder {
+@Mixin(ServerLevel.class)
+public abstract class ServerLevelMixin extends Level implements SubLevelContainerHolder {
     @Unique
     private final SubLevelContainer sable$plotContainer = this.sable$createPlotContainer();
 
-    protected LevelsMixin(final WritableLevelData writableLevelData, final ResourceKey<Level> resourceKey, final RegistryAccess registryAccess, final Holder<DimensionType> holder, final Supplier<ProfilerFiller> supplier, final boolean bl, final boolean bl2, final long l, final int i) {
+    protected ServerLevelMixin(final WritableLevelData writableLevelData, final ResourceKey<Level> resourceKey, final RegistryAccess registryAccess, final Holder<DimensionType> holder, final Supplier<ProfilerFiller> supplier, final boolean bl, final boolean bl2, final long l, final int i) {
         super(writableLevelData, resourceKey, registryAccess, holder, supplier, bl, bl2, l, i);
     }
 

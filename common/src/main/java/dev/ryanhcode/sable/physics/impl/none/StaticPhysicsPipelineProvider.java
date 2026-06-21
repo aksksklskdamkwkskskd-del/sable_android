@@ -12,5 +12,4 @@ public final class StaticPhysicsPipelineProvider implements PhysicsPipelineProvi
     public @NotNull PhysicsPipeline createPipeline(@NotNull final ServerLevel level) {
         return new StaticPhysicsPipeline();
     }
-
 }

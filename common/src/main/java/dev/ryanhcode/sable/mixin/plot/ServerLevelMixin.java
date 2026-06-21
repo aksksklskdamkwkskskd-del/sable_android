@@ -2,6 +2,7 @@ package dev.ryanhcode.sable.mixin.plot;
 
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
+import dev.ryanhcode.sable.mixinterface.plot.SubLevelContainerHolder;
 import dev.ryanhcode.sable.platform.SablePlatform;
 import dev.ryanhcode.sable.sublevel.storage.SubLevelOccupancySavedData;
 import dev.ryanhcode.sable.sublevel.storage.SubLevelTicketsSavedData;
@@ -30,7 +31,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 /**
- * Ticks the sub-level container stored in the {@link LevelsMixin} for server levels
+ * Ticks the sub-level container stored in the {@link SubLevelContainerHolder} for server levels
  */
 @Mixin(ServerLevel.class)
 public abstract class ServerLevelMixin extends Level {

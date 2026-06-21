@@ -6,6 +6,7 @@ import dev.ryanhcode.sable.api.physics.PhysicsPipelineBody;
 import dev.ryanhcode.sable.api.physics.callback.BlockSubLevelCollisionCallback;
 import dev.ryanhcode.sable.api.physics.mass.MassData;
 import dev.ryanhcode.sable.physics.impl.rapier.collider.RapierVoxelColliderData;
+import dev.ryanhcode.sable.platform.SableLoaderPlatform;
 import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
 import net.jpountz.lz4.LZ4FrameInputStream;
 import net.minecraft.CrashReport;
@@ -33,7 +34,7 @@ import java.util.zip.ZipInputStream;
  */
 @ApiStatus.Internal
 public final class Rapier3D {
-    private static final String NATIVE_DIR = ".sable/natives";
+    private static final Path NATIVE_DIR = resolveNativeDir();
     private static final String LIB_ZIP_NAME = "sable_rapier_binaries.zip.l4z";
     private static final String LIB_NAME = "sable_rapier";
 
@@ -43,6 +44,19 @@ public final class Rapier3D {
 
     static {
         loadLibrary();
+    }
+
+    private static Path resolveNativeDir() {
+        final Path gameDir = SableLoaderPlatform.INSTANCE.getGameDirectory();
+        if (gameDir != null) {
+            final Path gameDirRelativeDir = gameDir.resolve(".sable").resolve("natives").normalize();
+            Sable.LOGGER.info("Using game-dir-relative Rapier native directory {}", gameDirRelativeDir.toAbsolutePath());
+            return gameDirRelativeDir;
+        }
+
+        final Path fallbackDir = Paths.get(System.getProperty("user.home", System.getProperty("user.dir")), ".sable", "natives");
+        Sable.LOGGER.info("Using fallback Rapier native directory {}", fallbackDir.toAbsolutePath());
+        return fallbackDir;
     }
 
     private static String getNativeName() {
@@ -72,9 +86,8 @@ public final class Rapier3D {
                 throw new FileNotFoundException(LIB_ZIP_NAME);
             }
 
-            final Path dir = Paths.get(NATIVE_DIR);
-            if (!Files.exists(dir)) {
-                Files.createDirectories(dir);
+            if (!Files.exists(NATIVE_DIR)) {
+                Files.createDirectories(NATIVE_DIR);
             }
 
             try (final LZ4FrameInputStream is2 = new LZ4FrameInputStream(is);
@@ -83,7 +96,7 @@ public final class Rapier3D {
                 ZipEntry entry;
                 while ((entry = ti.getNextEntry()) != null) {
                     if (entry.getName().equals(NATIVE_NAME)) {
-                        final Path tempFile = dir.resolve(NATIVE_NAME);
+                        final Path tempFile = NATIVE_DIR.resolve(NATIVE_NAME);
                         if (Files.exists(tempFile)) {
                             Files.delete(tempFile);
                         }
@@ -101,9 +114,10 @@ public final class Rapier3D {
                     "Sable has failed to load the natives needed for its Rapier pipeline. Please report with system details and logs to {}",
                     Sable.ISSUE_TRACKER_URL,
                     t);
-            final CrashReport crashReport = CrashReport.forThrowable(t instanceof UnsatisfiedLinkError ? t.getCause() : t, "Sable linking with Rapier natives");
+            final CrashReport crashReport = CrashReport.forThrowable(t instanceof UnsatisfiedLinkError && t.getCause() != null ? t.getCause() : t, "Sable linking with Rapier natives");
             final CrashReportCategory category = crashReport.addCategory("Natives");
             category.setDetail("Name", Rapier3D.NATIVE_NAME);
+            category.setDetail("Native Directory", Rapier3D.NATIVE_DIR);
             throw new ReportedException(crashReport);
         }
     }
