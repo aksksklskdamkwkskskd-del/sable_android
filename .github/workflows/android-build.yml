@@ -73,7 +73,12 @@ jobs:
         run: |
           RAPIER_FILE=$(find . -name "Rapier3D.java")
           if [ -f "$RAPIER_FILE" ]; then
+            echo "PATCH, found $RAPIER_FILE"
             sed -i 's|private static final String NATIVE_DIR = ".sable/natives";|private static final String NATIVE_DIR = System.getProperty("java.io.tmpdir") + "/.sable/natives";|g' "$RAPIER_FILE"
+            sed -i '/static {/a \        try { org.spongepowered.asm.mixin.MixinEnvironment.getDefaultEnvironment().setCompatibilityLevel(org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel.JAVA_21); } catch(Throwable t) { System.out.println("[sable-ANDROID] Mixin set compatibility FAILED."); }' "$RAPIER_FILE"
+          else
+            echo "PATCH, Rapier3D.java missing layout"
+            exit 1
           fi
 
       - name: Patch lib.rs
@@ -148,7 +153,7 @@ jobs:
           name: rapier-native
           path: ${{ env.RUST_DIR }}/target/aarch64-linux-android/release/libsable_rapier.so
 
-  assemble:
+assemble:
     needs: [build-imgui, build-sable]
     runs-on: ubuntu-latest
     steps:
@@ -189,8 +194,9 @@ jobs:
             cp ../native-bin/libimgui-java64.so io/imgui/java/native-bin/
             zip -u "$VEIL_INTERNAL_PATH" io/imgui/java/native-bin/libimgui-java64.so
             zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
+            rm -rf io META-INF
           fi
-          
+           
           mkdir -p fake_natives_dir
           cp ../native-bin/libsable_rapier.so fake_natives_dir/sable_rapier_aarch64_linux.so
           
@@ -208,9 +214,24 @@ jobs:
               f_out.write(compressed)
           "
           
-          mkdir -p natives/sable_rapier
-          mv sable_rapier_binaries.zip.l4z natives/sable_rapier/
-          zip -u "$FINAL_NAME" natives/sable_rapier/sable_rapier_binaries.zip.l4z
+          SABLE_RAPIER_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep -oE "META-INF/(jarjar|jars)/sable_rapier-.*\.jar" | head -n 1)
+          if [ -n "$SABLE_RAPIER_INTERNAL_PATH" ]; then
+            echo "SABLE RAPIER PATH: using $SABLE_RAPIER_INTERNAL_PATH"
+            unzip "$FINAL_NAME" "$SABLE_RAPIER_INTERNAL_PATH" -d .
+            
+            mkdir -p natives/sable_rapier
+            mv sable_rapier_binaries.zip.l4z natives/sable_rapier/
+            zip -u "$SABLE_RAPIER_INTERNAL_PATH" natives/sable_rapier/sable_rapier_binaries.zip.l4z
+            
+            zip -u "$FINAL_NAME" "$SABLE_RAPIER_INTERNAL_PATH"
+            rm -rf natives META-INF
+          else
+            echo "SABLE RAPIER PATH: using root (LEGACY)"
+            mkdir -p natives/sable_rapier
+            mv sable_rapier_binaries.zip.l4z natives/sable_rapier/
+            zip -u "$FINAL_NAME" natives/sable_rapier/sable_rapier_binaries.zip.l4z
+            rm -rf natives
+          fi
           
           echo "ASSET_PATH=assemble/$FINAL_NAME" >> $GITHUB_ENV
 
@@ -219,6 +240,6 @@ jobs:
           files: ${{ env.ASSET_PATH }}
           tag_name: ${{ github.event.inputs.build_ref }}
           name: "Sable Android ${{ github.event.inputs.build_ref }}"
-          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V5.4\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
+          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V5.5\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
