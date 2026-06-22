@@ -20,6 +20,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.inputs.build_ref }}-${{ github.event.inputs.loader }}
   cancel-in-progress: true
 
+env:
+  BUILD_VERSION: "V5.5.1"
+
 jobs:
   build-imgui:
     runs-on: ubuntu-latest
@@ -73,11 +76,10 @@ jobs:
         run: |
           RAPIER_FILE=$(find . -name "Rapier3D.java")
           if [ -f "$RAPIER_FILE" ]; then
-            echo "PATCH, found $RAPIER_FILE"
+            echo "PATCH, $RAPIER_FILE"
             sed -i 's|private static final String NATIVE_DIR = ".sable/natives";|private static final String NATIVE_DIR = System.getProperty("java.io.tmpdir") + "/.sable/natives";|g' "$RAPIER_FILE"
-            sed -i '/static {/a \        try { org.spongepowered.asm.mixin.MixinEnvironment.getDefaultEnvironment().setCompatibilityLevel(org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel.JAVA_21); } catch(Throwable t) { System.out.println("[sable-ANDROID] Mixin set compatibility FAILED."); }' "$RAPIER_FILE"
           else
-            echo "PATCH, Rapier3D.java missing layout"
+            echo "PATCH, Rapier3D.java not found"
             exit 1
           fi
 
@@ -240,6 +242,6 @@ jobs:
           files: ${{ env.ASSET_PATH }}
           tag_name: ${{ github.event.inputs.build_ref }}
           name: "Sable Android ${{ github.event.inputs.build_ref }}"
-          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build V5.5\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
+          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build ${{ env.BUILD_VERSION }}\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
