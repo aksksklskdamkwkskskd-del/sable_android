@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BUILD_VERSION: "V5.7"
+  BUILD_VERSION: "V5.7.1"
 
 jobs:
   build-imgui:
@@ -198,11 +198,11 @@ jobs:
             unzip "$FINAL_NAME" "$VEIL_INTERNAL_PATH" -d .
             mkdir -p io/imgui/java/native-bin
             cp ../native-bin/libimgui-java64.so io/imgui/java/native-bin/
-            zip -u "$VEIL_INTERNAL_PATH" io/imgui/java/native-bin/libimgui-java64.so
-            zip -u "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
+            zip -q "$VEIL_INTERNAL_PATH" io/imgui/java/native-bin/libimgui-java64.so
+            zip -q "$FINAL_NAME" "$VEIL_INTERNAL_PATH"
             rm -rf io META-INF
           fi
-          
+           
           mkdir -p fake_natives_dir
           cp ../native-bin/libsable_rapier.so fake_natives_dir/sable_rapier_aarch64_linux.so
           
@@ -222,35 +222,20 @@ jobs:
           
           SABLE_RAPIER_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep -oE "META-INF/(jarjar|jars)/sable_rapier-.*\.jar" | head -n 1)
           
-          HAS_MODERN_LAYOUT=$(unzip -l "$FINAL_NAME" | grep -q "natives/sable_rapier/" && echo "true" || echo "false")
-          
           if [ -n "$SABLE_RAPIER_INTERNAL_PATH" ]; then
-            echo "SABLE RAPIER PATH: Detected Layout 1.2.2 (LEGACY)"
-            echo "SABLE RAPIER PATH: ($SABLE_RAPIER_INTERNAL_PATH)"
+            echo "SABLE RAPIER PATH: Detected Layout 1.2.2 (LEGACY) -> $SABLE_RAPIER_INTERNAL_PATH"
             unzip "$FINAL_NAME" "$SABLE_RAPIER_INTERNAL_PATH" -d .
-            
             mkdir -p natives/sable_rapier
             mv sable_rapier_binaries.zip.l4z natives/sable_rapier/
             
             zip -q "$SABLE_RAPIER_INTERNAL_PATH" natives/sable_rapier/sable_rapier_binaries.zip.l4z
-            
             zip -q "$FINAL_NAME" "$SABLE_RAPIER_INTERNAL_PATH"
             rm -rf natives META-INF
-
-          elif [ "$HAS_MODERN_LAYOUT" = "true" ]; then
+          else
             echo "SABLE RAPIER PATH: Detected Layout 2.0.0+"
             mkdir -p natives/sable_rapier
             mv sable_rapier_binaries.zip.l4z natives/sable_rapier/
             
-            zip -q "$FINAL_NAME" natives/sable_rapier/sable_rapier_binaries.zip.l4z
-            rm -rf natives
-
-          else
-            echo "SABLE RAPIER PATH: LAYOUT UNRECOGNIZED"
-            echo "SABLE RAPIER PATH: Using Fallback."
-            
-            mkdir -p natives/sable_rapier
-            mv sable_rapier_binaries.zip.l4z natives/sable_rapier/
             zip -q "$FINAL_NAME" natives/sable_rapier/sable_rapier_binaries.zip.l4z
             rm -rf natives
           fi
