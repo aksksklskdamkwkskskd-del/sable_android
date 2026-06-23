@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BUILD_VERSION: "V5.7.1"
+  BUILD_VERSION: "V5.7.2"
 
 jobs:
   build-imgui:
@@ -220,19 +220,20 @@ jobs:
               f_out.write(compressed)
           "
           
-          SABLE_RAPIER_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep -oE "META-INF/(jarjar|jars)/sable_rapier-.*\.jar" | head -n 1)
+          SABLE_RAPIER_INTERNAL_PATH=$(unzip -l "$FINAL_NAME" | grep -oE "META-INF/(jarjar|jars)/.*sable_rapier.*\.jar" | head -n 1)
           
           if [ -n "$SABLE_RAPIER_INTERNAL_PATH" ]; then
-            echo "SABLE RAPIER PATH: Detected Layout 1.2.2 (LEGACY) -> $SABLE_RAPIER_INTERNAL_PATH"
+            echo "SABLE RAPIER PATH: Using 1.2.2 Layout (LEGACY) -> $SABLE_RAPIER_INTERNAL_PATH"
             unzip "$FINAL_NAME" "$SABLE_RAPIER_INTERNAL_PATH" -d .
             mkdir -p natives/sable_rapier
             mv sable_rapier_binaries.zip.l4z natives/sable_rapier/
             
             zip -q "$SABLE_RAPIER_INTERNAL_PATH" natives/sable_rapier/sable_rapier_binaries.zip.l4z
+            
             zip -q "$FINAL_NAME" "$SABLE_RAPIER_INTERNAL_PATH"
             rm -rf natives META-INF
           else
-            echo "SABLE RAPIER PATH: Detected Layout 2.0.0+"
+            echo "SABLE RAPIER PATH: Using 2.0.0+ Layout"
             mkdir -p natives/sable_rapier
             mv sable_rapier_binaries.zip.l4z natives/sable_rapier/
             
