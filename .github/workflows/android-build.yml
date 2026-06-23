@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BUILD_VERSION: "V5.5.1"
+  BUILD_VERSION: "V5.6"
 
 jobs:
   build-imgui:
@@ -120,6 +120,10 @@ jobs:
           [target.aarch64-linux-android]
           linker = "$TOOLCHAIN/bin/aarch64-linux-android34-clang"
           EOF
+
+          export CC="$TOOLCHAIN/bin/aarch64-linux-android34-clang"
+          export CXX="$TOOLCHAIN/bin/aarch64-linux-android34-clang++"
+          export AR="$TOOLCHAIN/bin/llvm-ar"
           
           export RUSTFLAGS="-C link-arg=-Wl,--export-dynamic -C link-arg=-Wl,--no-gc-sections -C link-arg=-Wl,--undefined=Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_initialize"
           
