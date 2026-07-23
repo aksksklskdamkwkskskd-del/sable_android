@@ -135,27 +135,30 @@ public class SableStorageCommands {
     private static void logFoundSubLevel(final SavedSubLevelPointer pointer, final SubLevelData data, final ChunkPos chunkPos, final CommandSourceStack source, final ServerLevel level) {
         if (data == null) return;
 
+        final String uuid = data.uuid().toString();
         final String name = data.fullTag().contains("display_name")
                 ? data.fullTag().getString("display_name")
-                : data.uuid().toString();
+                : uuid;
         final GlobalSavedSubLevelPointer globalPointer = new GlobalSavedSubLevelPointer(chunkPos, pointer.storageIndex(), pointer.subLevelIndex());
 
         final Pose3d pose = data.pose();
 
         source.sendSuccess(() -> {
-            final Vector3dc pos =  pose.position();
             final MutableComponent component = Component.translatable("commands.sable.info.name", Component.literal(name));
-            final ResourceLocation dimension = level.dimension().location();
-            final Component fileId = Component.translatable("commands.sable.info.name.tooltip", globalPointer.toString());
-            component.setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, new Formatter().format(Locale.ROOT, "/execute in %s run tp @s %.2f %.2f %.2f", dimension, pos.x(), pos.y(), pos.z()).toString()))
-                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, fileId))
+            component.setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, uuid))
+                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(uuid)))
                     .withColor(ChatFormatting.GRAY));
             return component;
         }, false);
 
         source.sendSuccess(() -> {
             final Vector3dc pos = pose.position();
-            return Component.translatable("commands.sable.info.position", pos.x(), pos.y(), pos.z());
+            final ResourceLocation dimension = level.dimension().location();
+            final Component fileId = Component.translatable("commands.sable.info.name.tooltip", globalPointer.toString());
+            final MutableComponent component = Component.translatable("commands.sable.info.position", pos.x(), pos.y(), pos.z());
+            component.setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, new Formatter().format(Locale.ROOT, "/execute in %s run tp @s %.2f %.2f %.2f", dimension, pos.x(), pos.y(), pos.z()).toString()))
+                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, fileId)));
+            return component;
         }, false);
 
         source.sendSuccess(() -> {

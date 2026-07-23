@@ -16,6 +16,7 @@
     "camera.new_camera_types.MinecraftMixin",
     "clip_overwrite.ClientLevelMixin",
     "clip_overwrite.GameRendererMixin",
+    "command.ClientSuggestionProviderMixin",
     "compatibility.iris.ExtendedShaderMixin",
     "compatibility.shouldersurfing.ObjectPickerMixin",
     "conduit.ConduitRendererMixin",
