@@ -78,6 +78,11 @@
   "commands.sable.forceload.add.count": "Added force-loading tickets for %s sub-level(s)",
   "commands.sable.forceload.remove.count": "Removed force-loading tickets for %s sub-level(s)",
 
+  "commands.sable.forceload.query.none": "No force-loading tickets were found in %s",
+  "commands.sable.forceload.query.count": "%s force-loading ticket(s) were found for %s sub-level(s) in %s:",
+  "commands.sable.forceload.sub_level_name": "%s:",
+  "commands.sable.forceload.ticket": "    %s",
+
   "argument.sable.body.selector.all": "All sub-levels",
   "argument.sable.body.selector.nearest": "Nearest sub-level",
   "argument.sable.body.selector.random": "Random sub-level",

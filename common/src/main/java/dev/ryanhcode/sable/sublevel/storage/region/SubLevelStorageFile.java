@@ -208,6 +208,10 @@ public class SubLevelStorageFile implements AutoCloseable {
         return byteBuffer;
     }
 
+    public boolean isEmpty() {
+        return this.usedSectors.length() <= (this.beginningSectorSize / this.sectorSize);
+    }
+
     /**
      * Writes a sub-levels data to disk
      *
@@ -377,26 +381,6 @@ public class SubLevelStorageFile implements AutoCloseable {
         return (start << 8) | length; // Pack the offset and length into a single integer
     }
 
-    /**
-     * Frees any native resources held by this object.
-     */
-    @Override
-    public void close() throws IOException {
-        try {
-            this.padOrTruncateToFullSector();
-        } finally {
-            try {
-                this.file.force(true);
-            } finally {
-                this.file.close();
-            }
-        }
-    }
-
-    public void flush() throws IOException {
-        this.file.force(true);
-    }
-
     private void padOrTruncateToFullSector() throws IOException {
         // how many sectors of data are we using?
         final int bytesNeededForFile = this.usedSectors.length() * this.sectorSize;
@@ -413,6 +397,32 @@ public class SubLevelStorageFile implements AutoCloseable {
                 this.file.write(byteBuffer, desiredSize - 1);
             }
         }
+    }
+
+    /**
+     * Frees any native resources held by this object.
+     */
+    @Override
+    public void close() throws IOException {
+        try {
+            this.padOrTruncateToFullSector();
+        } finally {
+            try {
+                this.file.force(true);
+            } finally {
+                this.file.close();
+            }
+        }
+    }
+
+    public void delete() throws IOException {
+        this.file.close();
+        Files.delete(this.path);
+        Files.deleteIfExists(this.externalFileDir);
+    }
+
+    public void flush() throws IOException {
+        this.file.force(true);
     }
 
     class SectorSpanDataBuffer extends ByteArrayOutputStream {

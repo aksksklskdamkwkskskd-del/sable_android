@@ -30,6 +30,49 @@ public class SableStorageCommands {
 
     public static void register(final LiteralArgumentBuilder<CommandSourceStack> sableBuilder, final CommandBuildContext buildContext) {
         sableBuilder.then(Commands.literal("storage")
+                .then(Commands.literal("prune_regions")
+                        .executes(ctx -> {
+                            final ServerLevel level = ctx.getSource().getLevel();
+                            final ServerSubLevelContainer container = ServerSubLevelContainer.getContainer(level);
+                            final SubLevelHoldingChunkMap holdingChunkMap = container.getHoldingChunkMap();
+                            final SubLevelStorage storage = holdingChunkMap.getStorage();
+
+                            final File[] regionFiles = storage.getFolder().toFile().listFiles((dir, name) -> name.endsWith(SubLevelRegionFile.FILE_EXTENSION));
+
+                            if (regionFiles != null) {
+                                for (final File regionFile : regionFiles) {
+                                    final String fileName = regionFile.getName();
+                                    final String withoutExtension = fileName.substring(0, fileName.length() - SubLevelRegionFile.FILE_EXTENSION.length());
+                                    final String[] parts = withoutExtension.split("\\.");
+                                    if (parts.length != 3) continue;
+
+                                    final int regionX, regionZ;
+                                    try {
+                                        regionX = Integer.parseInt(parts[1]);
+                                        regionZ = Integer.parseInt(parts[2]);
+                                    } catch (final NumberFormatException e) {
+                                        continue;
+                                    }
+
+                                    for (int localX = 0; localX < SubLevelRegionFile.SIDE_LENGTH; localX++) {
+                                        for (int localZ = 0; localZ < SubLevelRegionFile.SIDE_LENGTH; localZ++) {
+                                            final ChunkPos chunkPos = new ChunkPos(
+                                                    regionX * SubLevelRegionFile.SIDE_LENGTH + localX,
+                                                    regionZ * SubLevelRegionFile.SIDE_LENGTH + localZ
+                                            );
+
+                                            final SubLevelHoldingChunk holdingChunk = storage.attemptLoadHoldingChunk(chunkPos);
+                                            if (holdingChunk == null) continue;
+
+                                            if (holdingChunk.isEmpty()) {
+                                                storage.attemptRemoveHoldingChunk(chunkPos);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            return 1;
+                        }))
                 .then(Commands.literal("find_all_sub_levels")
                         .executes(ctx -> {
                             final ServerLevel level = ctx.getSource().getLevel();
