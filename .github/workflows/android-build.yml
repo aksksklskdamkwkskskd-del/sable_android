@@ -26,7 +26,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BUILD_VERSION: "V6.3.1 (D)"
+  BUILD_VERSION: "V6.3.2 (D)"
 
 jobs:
   build-imgui:
@@ -81,7 +81,7 @@ jobs:
         run: |
           RAPIER_FILE=$(find . -name "Rapier3D.java")
           
-          sed -i '/private static Path resolveNativeDir() {/a \        String uh = System.getProperty("user.home"); if (uh != null && (uh.startsWith("/data/") || uh.startsWith("/data/user/"))) { return java.nio.file.Paths.get(uh, ".sable", "natives"); }' "$RAPIER_FILE"
+          sed -i '/private static Path resolveNativeDir() {/a \        String tmp = System.getProperty("java.io.tmpdir"); if (tmp != null && (tmp.startsWith("/data/") || tmp.startsWith("/data/user/"))) { return java.nio.file.Paths.get(tmp, ".sable", "natives"); }' "$RAPIER_FILE"
 
       - name: Patch lib.rs
         run: |
