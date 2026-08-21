@@ -26,7 +26,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BUILD_VERSION: "V6.1.0 (D)"
+  BUILD_VERSION: "V6.2.0 (D)"
 
 jobs:
   build-imgui:
@@ -80,27 +80,28 @@ jobs:
       - name: Patch Rapier3D.java
         run: |
           RAPIER_FILE=$(find . -name "Rapier3D.java")
-          if [ -f "$RAPIER_FILE" ]; then
-            echo "PATCH, $RAPIER_FILE"
-            python3 -c "
-          with open('$RAPIER_FILE', 'r') as f:
-              content = f.read()
+          RAPIER_DIR=$(dirname "$RAPIER_FILE")
 
-          patch = '''private static final String NATIVE_DIR = (() -> {
-              String envTmp = System.getenv(\"TMPDIR\");
-              String base = (envTmp != null && !envTmp.trim().isEmpty()) ? envTmp : System.getProperty(\"java.io.tmpdir\");
-              return base + \"/.sable/natives\";
-          })();'''
+          cat << 'EOF' > "$RAPIER_DIR/AndroidPathHelper.java"
+          package dev.ryanhcode.sable.physics.impl.rapier;
+          import java.io.File;
 
-          import re
-          new_content = re.sub(r'private static final String NATIVE_DIR = .*?;', patch, content)
-          with open('$RAPIER_FILE', 'w') as f:
-              f.write(new_content)
-          "
-          else
-            echo "PATCH, Rapier3D.java not found"
-            exit 1
-          fi
+          public class AndroidPathHelper {
+              public static String getNativeDir() {
+                  String home = System.getProperty("user.home");
+                  String tmp = System.getProperty("java.io.tmpdir");
+                  if (home != null && (home.startsWith("/data/") || home.startsWith("/data/user/"))) {
+                      File internalDir = new File(home, ".sable/natives");
+                      if (!internalDir.exists()) internalDir.mkdirs();
+                      return internalDir.getAbsolutePath();
+                  }
+                  String base = (tmp != null && !tmp.trim().isEmpty()) ? tmp : home;
+                  return base + "/.sable/natives";
+              }
+          }
+          EOF
+
+          sed -i 's|private static final String NATIVE_DIR = .*;|private static final String NATIVE_DIR = dev.ryanhcode.sable.physics.impl.rapier.AndroidPathHelper.getNativeDir();|g' "$RAPIER_FILE"
 
       - name: Patch lib.rs
         run: |
