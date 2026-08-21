@@ -26,7 +26,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BUILD_VERSION: "V6.0.1 (D)"
+  BUILD_VERSION: "V6.1.0 (D)"
 
 jobs:
   build-imgui:
@@ -82,7 +82,21 @@ jobs:
           RAPIER_FILE=$(find . -name "Rapier3D.java")
           if [ -f "$RAPIER_FILE" ]; then
             echo "PATCH, $RAPIER_FILE"
-            sed -i 's|private static final String NATIVE_DIR = ".sable/natives";|private static final String NATIVE_DIR = System.getProperty("java.io.tmpdir") + "/.sable/natives";|g' "$RAPIER_FILE"
+            python3 -c "
+          with open('$RAPIER_FILE', 'r') as f:
+              content = f.read()
+
+          patch = '''private static final String NATIVE_DIR = (() -> {
+              String envTmp = System.getenv(\"TMPDIR\");
+              String base = (envTmp != null && !envTmp.trim().isEmpty()) ? envTmp : System.getProperty(\"java.io.tmpdir\");
+              return base + \"/.sable/natives\";
+          })();'''
+
+          import re
+          new_content = re.sub(r'private static final String NATIVE_DIR = .*?;', patch, content)
+          with open('$RAPIER_FILE', 'w') as f:
+              f.write(new_content)
+          "
           else
             echo "PATCH, Rapier3D.java not found"
             exit 1
