@@ -15,13 +15,18 @@ on:
         description: 'Tag or Branch to build'
         required: true
         default: 'main'
+      is_prerelease:
+        description: 'Mark as pre-release (Untested yet)'
+        type: boolean
+        required: true
+        default: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.inputs.build_ref }}-${{ github.event.inputs.loader }}
   cancel-in-progress: true
 
 env:
-  BUILD_VERSION: "V6.0.0 (D)"
+  BUILD_VERSION: "V6.0.1 (D)"
 
 jobs:
   build-imgui:
@@ -248,6 +253,17 @@ jobs:
           files: ${{ env.ASSET_PATH }}
           tag_name: ${{ github.event.inputs.build_ref }}
           name: "Sable Android ${{ github.event.inputs.build_ref }}"
-          body: "Sable Android for ${{ github.event.inputs.loader }} loader\nAutomated Build ${{ env.BUILD_VERSION }}\n\n[View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})"
+          prerelease: ${{ inputs.is_prerelease != false }}
+          body: |
+            Sable Android for ${{ github.event.inputs.loader }} loader
+            Automated Build ${{ env.BUILD_VERSION }}
+            
+            > **WARNING: UNTESTED/ALPHA BUILD**
+            > Releases with yellow pre-release badge are **NOT TESTED**.
+            > Or active alpha test build.
+            > You can use them but expect errors/crashes.
+            > I remove or make them normal releases when I confirm they work (I guess).
+            
+            [View Original Release](https://github.com/ryanhcode/sable/releases/tag/${{ github.event.inputs.build_ref }})
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
