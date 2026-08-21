@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BUILD_VERSION: "V5.7.2"
+  BUILD_VERSION: "V6.0.0 (D)"
 
 jobs:
   build-imgui:
@@ -89,7 +89,7 @@ jobs:
           if [ -f "$TARGET_FILE" ]; then
             echo "PATCH, $TARGET_FILE"
             sed -i 's/pub extern "system"/pub extern "C"/g' "$TARGET_FILE"
-            sed -i 's/#\[no_mangle\]/#[unsafe(no_mangle)]/g' "$TARGET_FILE"
+            grep -q "unsafe(no_mangle)" "$TARGET_FILE" || sed -i 's/#\[no_mangle\]/#[unsafe(no_mangle)]/g' "$TARGET_FILE"
           else
             echo "PATCH, $TARGET_FILE not found"
             exit 1
@@ -125,7 +125,7 @@ jobs:
           export CXX="$TOOLCHAIN/bin/aarch64-linux-android34-clang++"
           export AR="$TOOLCHAIN/bin/llvm-ar"
           
-          export RUSTFLAGS="-C link-arg=-Wl,--export-dynamic -C link-arg=-Wl,--no-gc-sections -C link-arg=-Wl,--undefined=Java_dev_ryanhcode_sable_physics_impl_rapier_Rapier3D_initialize"
+          export RUSTFLAGS="-C link-arg=-Wl,--export-dynamic -C link-arg=-Wl,--no-gc-sections"
           
           cargo clean
           cargo build --release --target aarch64-linux-android
