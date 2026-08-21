@@ -26,7 +26,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BUILD_VERSION: "V6.2.0 (D)"
+  BUILD_VERSION: "V6.3.0 (D)"
 
 jobs:
   build-imgui:
@@ -80,28 +80,8 @@ jobs:
       - name: Patch Rapier3D.java
         run: |
           RAPIER_FILE=$(find . -name "Rapier3D.java")
-          RAPIER_DIR=$(dirname "$RAPIER_FILE")
-
-          cat << 'EOF' > "$RAPIER_DIR/AndroidPathHelper.java"
-          package dev.ryanhcode.sable.physics.impl.rapier;
-          import java.io.File;
-
-          public class AndroidPathHelper {
-              public static String getNativeDir() {
-                  String home = System.getProperty("user.home");
-                  String tmp = System.getProperty("java.io.tmpdir");
-                  if (home != null && (home.startsWith("/data/") || home.startsWith("/data/user/"))) {
-                      File internalDir = new File(home, ".sable/natives");
-                      if (!internalDir.exists()) internalDir.mkdirs();
-                      return internalDir.getAbsolutePath();
-                  }
-                  String base = (tmp != null && !tmp.trim().isEmpty()) ? tmp : home;
-                  return base + "/.sable/natives";
-              }
-          }
-          EOF
-
-          sed -i 's|private static final String NATIVE_DIR = .*;|private static final String NATIVE_DIR = dev.ryanhcode.sable.physics.impl.rapier.AndroidPathHelper.getNativeDir();|g' "$RAPIER_FILE"
+          
+          sed -i 's|private static final Path NATIVE_DIR = resolveNativeDir();|private static final Path NATIVE_DIR = java.nio.file.Paths.get(System.getProperty("user.home"), ".sable", "natives");|g' "$RAPIER_FILE"
 
       - name: Patch lib.rs
         run: |
