@@ -44,6 +44,7 @@ jobs:
           PHASES=(
             "1.0.5|android-build-A-103-105.yml"
             "1.2.1|android-build-B-106-121.yml"
+            "2.0.3|android-build-C-122-203.yml"
           )
           
           FALLBACK_WORKFLOW="android-build.yml"
